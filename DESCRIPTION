@@ -1,0 +1,30 @@
+Package: geodom
+Title: Acceso a un Marco de Datos Geoespaciales Estandarizados para la Republica Dominicana
+Version: 0.0.1.9000
+Authors@R: 
+    c(person(given = "Daniel E.",
+           family = "de la Rosa",
+           role = c("aut", "cre"),
+           email = "me@dnldelarosa.com"),
+    person(given = "Adatar",
+           role = "cph"))
+Description: Provee un conjunto de funciones para descargar y cargar de forma
+    eficiente datos geoespaciales estandarizados de la Republica
+    Dominicana. Este paquete es un componente central de 'GeoDOM', una
+    iniciativa de Adatar, que busca ofrecer un framework unificado para
+    el analisis geoespacial. Las funciones utilizan un sistema de cache
+    local para minimizar descargas, entregando los datos como objetos 'sf'
+    (simple features) listos para su uso. Los datasets incluyen las
+    divisiones politico-administrativas del pais en sus distintos niveles
+    (provincias, municipios, etc.), facilitando analisis reproducibles y la
+    integracion con otras herramientas del ecosistema R.
+License: MIT + file LICENSE
+Encoding: UTF-8
+Roxygen: list(markdown = TRUE)
+RoxygenNote: 7.3.2
+Imports:
+    sf,
+    fs,
+    pins,
+    dplyr,
+    jsonlite

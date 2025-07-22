@@ -44,12 +44,59 @@ gd_provinces <- function(id = "RD_PROV", sf = TRUE, .reg = NULL) {
         dplyr::select(PROV = PROV_CODE, REG_CODE) |>
         dplyr::distinct() |>
         dplyr::left_join(data_sf, by = c("PROV")) -> data_sf
-    } else {
-      stop(
-        "El argumento .reg solo puede ser uno de los siguientes: \n  - 'rup'"
-      )
     }
   }
 
   return(data_sf)
+}
+
+# Función auxiliar para obtener el dataset de provincias_alias
+.get_provincias_alias <- function() {
+  tryCatch({
+    # Usar la función estándar de geodomR para obtener datasets
+    datos <- gd_get_dataset(id = "provincias_alias")
+    return(datos$data)
+  }, error = function(e) {
+    # Si falla, usar los datos básicos de gd_provinces
+    prov_data <- gd_provinces(sf = FALSE)
+    # Convertir a formato compatible con el dataset de alias
+    prov_alias <- data.frame(
+      PROV_ID = sprintf("%02d", as.numeric(rownames(prov_data))),
+      PROV_CODE = prov_data$PROV_CODE,
+      PROV_NAME = prov_data$PROV_NAME,
+      stringsAsFactors = FALSE
+    )
+    return(prov_alias)
+  })
+}
+
+#' Limpiar nombres de provincias de República Dominicana
+#' 
+#' Esta función limpia y estandariza los nombres de las provincias de la 
+#' República Dominicana, utilizando un dataset de alias para mayor robustez
+#' en el emparejamiento de nombres.
+#'
+#' @param prov Vector de caracteres con nombres de provincias a limpiar
+#' @param .tol Nivel de tolerancia numérico para similitud de cadenas. Por defecto 0.25.
+#' @param .on_error Método de manejo de errores. Por defecto "fail". 
+#'   Puede ser "fail" para detener la ejecución, "omit" para ignorar nombres 
+#'   no emparejados, o "na" para devolver NA en nombres no emparejados.
+#'
+#' @return Vector de caracteres con nombres de provincias limpiados
+#' @export
+#'
+#' @examples
+#' \dontrun{
+#'   # Uso básico
+#'   provincias_limpias <- gd_clean_prov_name(c("azua", "barahona", "stgo"))
+#'   
+#'   # Con mayor tolerancia
+#'   provincias_limpias <- gd_clean_prov_name(c("azua", "barahona"), .tol = 0.5)
+#' }
+gd_clean_prov_name <- function(prov, .tol = 0.25, .on_error = "fail") {
+  # Obtener dataset de alias
+  alias_data <- .get_provincias_alias()
+  
+  # Usar la función de limpieza de geodomR adaptada para provincias
+  .do_prov_names_cleaning(prov, alias_data, .tol, .on_error)
 }

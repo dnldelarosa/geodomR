@@ -27,4 +27,8 @@ Imports:
     fs,
     pins,
     dplyr,
-    jsonlite
+    jsonlite,
+    magrittr,
+    stringr,
+    stringdist,
+    cli

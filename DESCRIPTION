@@ -31,4 +31,6 @@ Imports:
     magrittr,
     stringr,
     stringdist,
-    cli
+    cli,
+    tidyr,
+    httr2

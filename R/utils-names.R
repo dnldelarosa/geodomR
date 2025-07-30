@@ -1,3 +1,9 @@
+# Evitar NOTEs de variables globales en dplyr
+utils::globalVariables(c(
+  'PROV_ID', 'PROV_NAME', 'PROV_NAME_CLEAN', 'PROV_NAME_OFFICIAL', 'input_name', 'input_clean', '.',
+  'distance', 'distance_norm', 'starts_with_input', 'input_starts_with_name', 'abbreviation_bonus',
+  'length_penalty', 'total_score', 'match_type'
+))
 # Funciones de limpieza y normalización de nombres administrativos
 
 # Esta función replica la funcionalidad de .text_cleaning de rgisDR

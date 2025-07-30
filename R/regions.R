@@ -1,3 +1,7 @@
+# Evitar NOTEs de variables globales en dplyr
+utils::globalVariables(c(
+  'REG_ID', 'priority', 'REG_NAME', 'REG_NAME_CLEAN', 'REG_NAME_OFFICIAL', 'distance'
+))
 # R/regions.R
 
 #' Obtener Límites de las Regiones de Planificación

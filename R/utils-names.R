@@ -2,9 +2,17 @@
 utils::globalVariables(c(
   'PROV_ID', 'PROV_NAME', 'PROV_NAME_CLEAN', 'PROV_NAME_OFFICIAL', 'input_name', 'input_clean', '.',
   'distance', 'distance_norm', 'starts_with_input', 'input_starts_with_name', 'abbreviation_bonus',
-  'length_penalty', 'total_score', 'match_type', 'reference_name', 'reference_clean', 'REGION_NAME_OFFICIAL'
+  'length_penalty', 'total_score', 'match_type', 'reference_name', 'reference_clean', 'REGION_NAME_OFFICIAL',
+  'ZONE_ID', 'ZONE_NAME', 'ZONE_NAME_OFFICIAL'
 ))
 # Funciones de limpieza y normalización de nombres administrativos
+
+# TODO: Implementar funciones de limpieza para otros niveles administrativos:
+# TODO: - gd_clean_municipality_name() y .do_municipality_names_cleaning()
+# TODO: - gd_clean_dm_name() y .do_dm_names_cleaning()
+# TODO: - gd_clean_section_name() y .do_section_names_cleaning()  
+# TODO: - gd_clean_bparaje_name() y .do_bparaje_names_cleaning()
+# TODO: Estas funciones mejorarán la detección automática y la estandarización de datos
 
 # Esta función replica la funcionalidad de .text_cleaning de rgisDR
 # para su uso en geodomR. No se han realizado mejoras ni refactorizaciones.
@@ -350,6 +358,152 @@ gd_clean_region_name <- function(names, .tol = 0.25, .on_error = "fail") {
       by = "input_name"
     ) %>%
     dplyr::pull(REGION_NAME_OFFICIAL)
+  
+  return(result)
+}
+
+# Función específica de limpieza de nombres de zonas de residencia
+.do_zone_names_cleaning <- function(names, alias_data, zones_data, .tol = 0.25, .on_error = "fail") {
+  # Limpiar los nombres de entrada
+  names_clean <- .text_cleaning(names)
+  
+  # Buscar coincidencias exactas en alias
+  exact_matches <- data.frame(
+    input_name = names,
+    input_clean = names_clean,
+    ZONE_NAME_OFFICIAL = NA_character_,
+    stringsAsFactors = FALSE
+  )
+  
+  if (!is.null(alias_data) && nrow(alias_data) > 0) {
+    # Buscar en alias
+    for (i in seq_along(names_clean)) {
+      clean_name <- names_clean[i]
+      if (clean_name == "_na_") next
+      
+      # Buscar coincidencia exacta en los alias (ZONE_NAME)
+      alias_match <- alias_data[.text_cleaning(alias_data$ZONE_NAME) == clean_name, ]
+      if (nrow(alias_match) > 0) {
+        exact_matches$ZONE_NAME_OFFICIAL[i] <- alias_match$TOPONIMIA[1]
+      } else {
+        # Buscar coincidencia exacta en nombres oficiales (TOPONIMIA)
+        official_match <- zones_data[.text_cleaning(zones_data$TOPONIMIA) == clean_name, ]
+        if (nrow(official_match) > 0) {
+          exact_matches$ZONE_NAME_OFFICIAL[i] <- official_match$TOPONIMIA[1]
+        }
+      }
+    }
+  }
+  
+  # Para nombres sin coincidencia exacta, intentar fuzzy matching
+  unmatched_names <- exact_matches[is.na(exact_matches$ZONE_NAME_OFFICIAL), ]
+  
+  if (nrow(unmatched_names) > 0) {
+    # Crear lista de todos los nombres de referencia posibles
+    reference_names <- c()
+    if (!is.null(alias_data) && nrow(alias_data) > 0) {
+      reference_names <- c(reference_names, alias_data$ZONE_NAME)
+    }
+    reference_names <- c(reference_names, zones_data$TOPONIMIA)
+    reference_names <- unique(reference_names[!is.na(reference_names)])
+    
+    # Aplicar fuzzy matching para cada nombre no coincidente
+    prefix_matches <- unmatched_names %>%
+      dplyr::rowwise() %>%
+      dplyr::do({
+        current_clean <- .$input_clean
+        
+        if (current_clean == "_na_") {
+          data.frame(
+            input_name = .$input_name,
+            input_clean = current_clean,
+            ZONE_NAME_OFFICIAL = NA_character_,
+            distance_norm = 1.0,
+            match_type = "na",
+            stringsAsFactors = FALSE
+          )
+        } else {
+          # Calcular distancias con todos los nombres de referencia
+          distances <- data.frame(
+            reference_name = reference_names,
+            reference_clean = .text_cleaning(reference_names),
+            stringsAsFactors = FALSE
+          ) %>%
+            dplyr::rowwise() %>%
+            dplyr::mutate(
+              distance = stringdist::stringdist(current_clean, reference_clean, method = "lv"),
+              distance_norm = distance / max(nchar(current_clean), nchar(reference_clean))
+            ) %>%
+            dplyr::ungroup()
+          
+          # Buscar mejor coincidencia
+          best_match <- distances %>%
+            dplyr::arrange(distance_norm) %>%
+            dplyr::slice(1)
+          
+          # Mapear el nombre de referencia al nombre oficial
+          official_name <- NA_character_
+          if (!is.null(alias_data) && best_match$reference_name %in% alias_data$ZONE_NAME) {
+            official_name <- alias_data$TOPONIMIA[alias_data$ZONE_NAME == best_match$reference_name][1]
+          } else if (best_match$reference_name %in% zones_data$TOPONIMIA) {
+            official_name <- best_match$reference_name
+          }
+          
+          data.frame(
+            input_name = .$input_name,
+            input_clean = current_clean,
+            ZONE_NAME_OFFICIAL = official_name,
+            distance_norm = best_match$distance_norm,
+            match_type = "fuzzy",
+            stringsAsFactors = FALSE
+          )
+        }
+      }) %>%
+      dplyr::ungroup()
+    
+    # Aplicar criterios de tolerancia y manejo de errores
+    final_matches <- prefix_matches %>%
+      dplyr::mutate(
+        ZONE_NAME_OFFICIAL = dplyr::case_when(
+          distance_norm <= .tol ~ ZONE_NAME_OFFICIAL,
+          .on_error == "na" ~ NA_character_,
+          .on_error == "omit" ~ input_name,
+          TRUE ~ ZONE_NAME_OFFICIAL
+        )
+      )
+    
+    # Verificar si hay errores que requieren abortar
+    if (.on_error == "fail" && any(final_matches$distance_norm > .tol, na.rm = TRUE)) {
+      problem_cases <- final_matches %>%
+        dplyr::filter(distance_norm > .tol) %>%
+        dplyr::mutate(
+          message = paste0("'", input_name, "' -> '", ZONE_NAME_OFFICIAL, "' (tolerancia: ", round(distance_norm, 3), ")")
+        )
+      
+      cli::cli_abort(
+        c(
+          "x" = "Algunos nombres de zonas no pudieron emparejarse con la tolerancia especificada ({(.tol)}):",
+          " " = paste(problem_cases$message, collapse = "\n  "),
+          "i" = "Considera aumentar .tol o usar .on_error = 'na' o 'omit'"
+        )
+      )
+    }
+    
+    # Actualizar las coincidencias exactas con los resultados fuzzy
+    exact_matches <- exact_matches %>%
+      dplyr::filter(!is.na(ZONE_NAME_OFFICIAL)) %>%
+      dplyr::bind_rows(
+        final_matches %>% dplyr::select(input_name, input_clean, ZONE_NAME_OFFICIAL)
+      )
+  }
+  
+  # Devolver resultado final manteniendo el orden original
+  result <- data.frame(input_name = names, stringsAsFactors = FALSE) %>%
+    dplyr::left_join(
+      exact_matches %>% dplyr::select(input_name, ZONE_NAME_OFFICIAL),
+      by = "input_name"
+    ) %>%
+    dplyr::pull(ZONE_NAME_OFFICIAL)
   
   return(result)
 }

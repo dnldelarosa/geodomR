@@ -11,7 +11,7 @@
 #' @param data Un data frame que contiene los datos a analizar.
 #' @param .level Cadena de caracteres opcional especificando el nivel administrativo.
 #'   Si se proporciona, la función solo considerará este nivel. Opciones válidas son:
-#'   "sections", "dm", "municipalities", "provinces", "regions", "bparajes".
+#'   "sections", "dm", "municipalities", "provinces", "regions", "zones", "bparajes".
 #' @param .name Cadena de caracteres opcional especificando el nombre de la variable
 #'   en `data` que contiene los nombres de las unidades administrativas. Si se
 #'   proporciona, la función solo considerará esta variable.
@@ -89,7 +89,7 @@ gd_detect_level <- function(data, .level = NULL, .name = NULL, .key = NULL) {
             
             # Evitar falsos positivos con columnas que tienen muy pocos valores únicos
             # A menos que sean coincidencias de limpieza exitosas
-            if (length(unique_values) < 3 && !(.opt_name %in% c("provinces", "regions"))) {
+            if (length(unique_values) < 3 && !(.opt_name %in% c("provinces", "regions", "zones"))) {
               next
             }
             
@@ -150,8 +150,40 @@ gd_detect_level <- function(data, .level = NULL, .name = NULL, .key = NULL) {
                   used_cleaning_function <- FALSE
                 })
               })
+            } else if (.opt_name == "zones" && key_name == "TOPONIMIA") {
+              tryCatch({
+                # Usar tolerancia estricta para coincidencias exactas/casi exactas
+                cleaned_values <- gd_clean_zone_name(unique_values, .tol = 0.25, .on_error = "fail")
+                # Si llegamos aquí sin error, todos los valores fueron exitosamente limpiados
+                matches <- length(unique_values)
+                used_cleaning_function <- TRUE
+              }, error = function(e) {
+                # Si falla con tolerancia estricta, intentar con tolerancia más permisiva
+                tryCatch({
+                  cleaned_values <- gd_clean_zone_name(unique_values, .tol = 0.5, .on_error = "na")
+                  cleaned_values <- cleaned_values[!is.na(cleaned_values)]
+                  # Solo considerar exitoso si al menos 80% de los valores se limpiaron
+                  if (length(cleaned_values) >= length(unique_values) * 0.8) {
+                    matches <- length(cleaned_values)
+                    used_cleaning_function <- TRUE
+                  } else {
+                    matches <- sum(unique_values %in% reference_values)
+                    used_cleaning_function <- FALSE
+                  }
+                }, error = function(e2) {
+                  # Como último recurso, usar comparación directa
+                  matches <- sum(unique_values %in% reference_values)
+                  used_cleaning_function <- FALSE
+                })
+              })
             } else {
               # Para otros niveles, usar comparación directa
+              # TODO: Implementar funciones de limpieza para otros niveles administrativos:
+              # TODO: - gd_clean_municipality_name() para municipalities
+              # TODO: - gd_clean_dm_name() para dm (distritos municipales)  
+              # TODO: - gd_clean_section_name() para sections
+              # TODO: - gd_clean_bparaje_name() para bparajes
+              # TODO: Esto mejorará significativamente la detección automática y reducirá falsos negativos
               matches <- sum(unique_values %in% reference_values)
               used_cleaning_function <- FALSE
             }
@@ -277,6 +309,16 @@ gd_detect_level <- function(data, .level = NULL, .name = NULL, .key = NULL) {
       }
     }, error = function(e) {
       message("No se pudieron cargar los datos de regiones: ", e$message)
+    })
+    
+    # Zonas de Residencia
+    tryCatch({
+      zones_data <- gd_zones(sf = FALSE)
+      if (!is.null(zones_data)) {
+        .options[["zones"]] <- zones_data
+      }
+    }, error = function(e) {
+      message("No se pudieron cargar los datos de zonas: ", e$message)
     })
     
     # Barrios/Parajes (si existe la función)

@@ -7,29 +7,31 @@ test_that("gd_clean_prov_name works with basic province names", {
   expect_equal(gd_clean_prov_name("distrito nacional"), "Distrito Nacional")
 })
 
-test_that("gd_clean_prov_name works with abbreviations", {
-  # Abreviaciones específicas - casos corregidos (usando tolerancia por defecto)
-  expect_equal(gd_clean_prov_name("stgo"), "Santiago")  # "stgo" debe mapearse a Santiago
-  expect_equal(gd_clean_prov_name("srodriguez"), "Santiago Rodríguez")  # "srodriguez" debe mapearse a Santiago Rodríguez  
-  expect_equal(gd_clean_prov_name("rod"), "Santiago Rodríguez")  # "rod" debe mapearse a Santiago Rodríguez
-  expect_equal(gd_clean_prov_name("rodriguez"), "Santiago Rodríguez")  # "rodriguez" debe mapearse a Santiago Rodríguez
+test_that("gd_clean_prov_name enforces strict tolerance by default", {
+  # Abreviaciones deben fallar con tolerancia por defecto para evitar matches incorrectos
+  expect_error(gd_clean_prov_name("stgo"), "no pudo emparejarse con la tolerancia especificada")
+  expect_error(gd_clean_prov_name("rod"), "no pudo emparejarse con la tolerancia especificada")
+  expect_error(gd_clean_prov_name("srodriguez"), "no pudo emparejarse con la tolerancia especificada")
+  
+  # Pero deben funcionar con .on_error = "na"
+  expect_true(is.na(gd_clean_prov_name("stgo", .on_error = "na")))
+  expect_true(is.na(gd_clean_prov_name("rod", .on_error = "na")))
+  
+  # Y con .on_error = "omit" deben devolver el input original
+  expect_equal(gd_clean_prov_name("stgo", .on_error = "omit"), "stgo")
+  expect_equal(gd_clean_prov_name("rod", .on_error = "omit"), "rod")
 })
 
-test_that("gd_clean_prov_name correctly distinguishes Santiago vs Santiago Rodriguez", {
-  # Casos que deben mapearse a "Santiago" (usando tolerancia por defecto)
-  expect_equal(gd_clean_prov_name("stgo"), "Santiago")
+test_that("gd_clean_prov_name works with complete names (no abbreviations)", {
+  # Casos que deben mapearse a "Santiago" - nombres completos funcionan con tolerancia por defecto
   expect_equal(gd_clean_prov_name("santiago"), "Santiago")
   expect_equal(gd_clean_prov_name("santi"), "Santiago")
   expect_equal(gd_clean_prov_name("sant"), "Santiago")
   expect_equal(gd_clean_prov_name("santiago de los caballeros"), "Santiago")
   
-  # Casos que deben mapearse a "Santiago Rodríguez"
+  # Casos que deben mapearse a "Santiago Rodríguez" - nombres completos funcionan con tolerancia por defecto
   expect_equal(gd_clean_prov_name("santiago rodriguez"), "Santiago Rodríguez")
   expect_equal(gd_clean_prov_name("santiago rod"), "Santiago Rodríguez")
-  expect_equal(gd_clean_prov_name("srodriguez"), "Santiago Rodríguez")
-  expect_equal(gd_clean_prov_name("rod"), "Santiago Rodríguez")
-  expect_equal(gd_clean_prov_name("rodriguez"), "Santiago Rodríguez")
-  expect_equal(gd_clean_prov_name("stgo rodriguez"), "Santiago Rodríguez")
 })
 
 test_that("gd_clean_prov_name handles multiple names", {
@@ -70,9 +72,24 @@ test_that("gd_clean_prov_name handles error modes correctly", {
 })
 
 test_that("gd_clean_prov_name works with prefixes", {
-  # Debe manejar prefijos como "provincia de"
+  # Debe manejar prefijos como "provincia de" - el bug original que se arregló
   expect_equal(gd_clean_prov_name("provincia de azua"), "Azua")
   expect_equal(gd_clean_prov_name("Provincia de Santiago"), "Santiago")
+  expect_equal(gd_clean_prov_name("Provincia de El Seibo"), "El Seibo")  # El caso específico del bug
+})
+
+test_that("gd_clean_prov_name enforces strict tolerance by default", {
+  # Abreviaciones deben fallar con tolerancia por defecto para evitar matches incorrectos
+  expect_error(gd_clean_prov_name("stgo"), "no pudo emparejarse con la tolerancia especificada")
+  expect_error(gd_clean_prov_name("rod"), "no pudo emparejarse con la tolerancia especificada")
+  
+  # Pero deben funcionar con .on_error = "na"
+  expect_true(is.na(gd_clean_prov_name("stgo", .on_error = "na")))
+  expect_true(is.na(gd_clean_prov_name("rod", .on_error = "na")))
+  
+  # Y con .on_error = "omit" deben devolver el input original
+  expect_equal(gd_clean_prov_name("stgo", .on_error = "omit"), "stgo")
+  expect_equal(gd_clean_prov_name("rod", .on_error = "omit"), "rod")
 })
 
 test_that("gd_clean_prov_name handles empty strings", {

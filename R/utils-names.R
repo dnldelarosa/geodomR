@@ -31,6 +31,7 @@ utils::globalVariables(c(
   names <- chartr("áéíóúüñ", "aeiouun", names)
   # Elimina palabras irrelevantes
   names <- stringr::str_remove(names, stringr::regex("^region[ ]?", ignore_case = TRUE))
+  names <- stringr::str_remove(names, stringr::regex("^provincia[ ]?de[ ]?", ignore_case = TRUE))
   names <- stringr::str_remove(names, stringr::regex("^provincia[ ]?", ignore_case = TRUE))
   names <- stringr::str_remove(names, stringr::regex("^municipio[ ]?", ignore_case = TRUE))
   names <- stringr::str_remove(names, stringr::regex("^ayuntamiento[ ]?de[ ]?", ignore_case = TRUE))
@@ -113,13 +114,7 @@ utils::globalVariables(c(
         distance_norm = pmax(distance / nchar(current_clean), distance / nchar(PROV_NAME_CLEAN)),
         starts_with_input = ifelse(startsWith(PROV_NAME_CLEAN, current_clean), 0.2, 0),
         input_starts_with_name = ifelse(startsWith(current_clean, PROV_NAME_CLEAN), 0.1, 0),
-        abbreviation_bonus = ifelse(
-          (current_clean == "stgo" & grepl("^santiago", PROV_NAME_CLEAN)) |
-          (current_clean == "srodriguez" & grepl("santiago.*rodriguez", PROV_NAME_CLEAN)) |
-          (current_clean == "rod" & grepl("rodriguez", PROV_NAME_CLEAN)) |
-          (current_clean == "rodriguez" & grepl("santiago.*rodriguez", PROV_NAME_CLEAN)),
-          0.3, 0
-        ),
+        abbreviation_bonus = 0,
         length_penalty = ifelse(nchar(PROV_NAME_CLEAN) > nchar(current_clean) * 2, 0.05, 0),
         total_score = distance_norm - starts_with_input - input_starts_with_name - abbreviation_bonus + length_penalty
       ) %>%
@@ -128,7 +123,7 @@ utils::globalVariables(c(
     if (nrow(distances) > 0) {
       best_match <- distances[1, ]
       
-      if (best_match$distance_norm <= .tol) {
+      if (best_match$total_score <= .tol) {
         result[i] <- best_match$PROV_NAME_OFFICIAL
       } else {
         # Manejar casos que exceden tolerancia
@@ -136,7 +131,7 @@ utils::globalVariables(c(
           cli::cli_abort(
             c(
               "x" = "Nombre de provincia no pudo emparejarse con la tolerancia especificada:",
-              " " = paste0("'", current_name, "' -> '", best_match$PROV_NAME_OFFICIAL, "' (tolerancia: ", round(best_match$distance_norm, 3), ")"),
+              " " = paste0("'", current_name, "' -> '", best_match$PROV_NAME_OFFICIAL, "' (tolerancia: ", round(best_match$total_score, 3), ")"),
               "i" = "Considera aumentar .tol o usar .on_error = 'na' o 'omit'"
             )
           )

@@ -11,7 +11,7 @@ gd_detect_level(data, .level = NULL, .name = NULL, .key = NULL)
 
 \item{.level}{Cadena de caracteres opcional especificando el nivel administrativo.
 Si se proporciona, la función solo considerará este nivel. Opciones válidas son:
-"sections", "dm", "municipalities", "provinces", "regions", "bparajes".}
+"sections", "dm", "municipalities", "provinces", "regions", "zones", "bparajes".}
 
 \item{.name}{Cadena de caracteres opcional especificando el nombre de la variable
 en \code{data} que contiene los nombres de las unidades administrativas. Si se

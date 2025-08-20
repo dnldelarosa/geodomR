@@ -12,6 +12,8 @@
 #'   columna de geometría. Por defecto es `TRUE`.
 #' @param .reg Caracter. Si es `"rup"`, agrega la columna de región administrativa
 #'   según la Ley 345-22. Por defecto es `NULL`.
+#' @param verbose Lógico. Si es `TRUE`, muestra mensajes de progreso durante la 
+#' descarga y procesamiento de datos. Por defecto es `FALSE`.
 #'
 #' @return Un objeto de la clase `sf` o un `data.frame`, dependiendo del valor de `sf`.
 #'         Si `.reg = "rup"`, incluye la columna de región administrativa.
@@ -28,18 +30,23 @@
 #'   # Cargar provincias con columna de región administrativa
 #'   provincias_reg <- gd_provinces(.reg = "rup")
 #' }
-gd_provinces <- function(id = "RD_PROV", sf = TRUE, .reg = NULL) {
+gd_provinces <- function(id = "RD_PROV", sf = TRUE, .reg = NULL, verbose = FALSE) {
   PROV_CODE <- NULL  # Evitar el warning de no utilizado
   REG_CODE <- NULL   # Evitar el warning de no utilizado
-  data_sf <- fetch_and_cache(id = id)
+
+  if (verbose) message("Descargando y cargando límites de provincias...")
+
+  data_sf <- fetch_and_cache(id = id, verbose = verbose)
 
   if (!sf) {
+    if (verbose) message("Eliminando geometría, devolviendo data.frame...")
     data_sf <- sf::st_drop_geometry(data_sf)
   }
 
   if (!is.null(.reg)) {
     if (.reg == tolower('rup')) {
-      .datos <- gd_get_dataset(id = "division_territorial_rd_ley_345_22")
+      if (verbose) message("Agregando columna de región administrativa (Ley 345-22)...")
+      .datos <- gd_get_dataset(id = "division_territorial_rd_ley_345_22", verbose = verbose)
       .datos[['data']] |>
         dplyr::select(PROV = PROV_CODE, REG_CODE) |>
         dplyr::distinct() |>
@@ -47,6 +54,7 @@ gd_provinces <- function(id = "RD_PROV", sf = TRUE, .reg = NULL) {
     }
   }
 
+  if (verbose) message("Finalizado.")
   return(data_sf)
 }
 
@@ -54,7 +62,7 @@ gd_provinces <- function(id = "RD_PROV", sf = TRUE, .reg = NULL) {
 .get_provincias_alias <- function() {
   tryCatch({
     # Usar la función estándar de geodomR para obtener datasets
-    datos <- gd_get_dataset(id = "provincias_alias")
+    datos <- gd_get_dataset(id = "provincias_alias", verbose = FALSE)
     return(datos$data)
   }, error = function(e) {
     # Si falla, usar los datos básicos de gd_provinces

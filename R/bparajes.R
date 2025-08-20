@@ -1,5 +1,12 @@
 # R/bparajes.R
 
+# TODO: Implementar funciones de limpieza para barrios y parajes:
+# TODO: - gd_clean_bparaje_name() función exportada
+# TODO: - .get_bparajes_alias() helper function  
+# TODO: - .do_bparaje_names_cleaning() función interna
+# TODO: - Crear dataset bparajes_alias en geodom-data-contributions
+# TODO: Esto mejorará significativamente la detección automática de barrios y parajes
+
 #' Obtener Límites de los Barrios y Parajes de la República Dominicana
 #'
 #' Descarga (si es necesario) y carga los límites de los barrios y parajes de la

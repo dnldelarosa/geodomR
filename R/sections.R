@@ -1,5 +1,12 @@
 # R/sections.R
 
+# TODO: Implementar funciones de limpieza para secciones:
+# TODO: - gd_clean_section_name() función exportada  
+# TODO: - .get_sections_alias() helper function
+# TODO: - .do_section_names_cleaning() función interna
+# TODO: - Crear dataset sections_alias en geodom-data-contributions
+# TODO: Esto mejorará significativamente la detección automática de secciones
+
 #' Obtener Límites de las Secciones de la República Dominicana
 #'
 #' Descarga (si es necesario) y carga los límites de las secciones de la

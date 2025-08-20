@@ -13,97 +13,105 @@ get_base_data_url <- function() {
 }
 
 #' Verifica si un archivo remoto ha cambiado comparando metadatos
-#' 
+#'
 #' Esta función hace una petición HEAD al servidor para obtener ETag o Last-Modified
 #' y los compara con los metadatos almacenados en el pin local.
-#' 
+#'
 #' @param url URL del archivo remoto
 #' @param pin_name Nombre del pin en el caché local
 #' @param board Board de pins donde está almacenado el caché
-#' @param verbose Logical. Si TRUE, muestra mensajes informativos. Default TRUE.
+#' @param verbose Logical. Si TRUE, muestra mensajes informativos. Default FALSE.
 #' @return TRUE si el archivo ha cambiado o no se puede determinar, FALSE si no ha cambiado
 #' @noRd
-check_remote_file_changed <- function(url, pin_name, board, verbose = TRUE) {
-  tryCatch({
-    # Verificar si tenemos metadatos del pin local
-    if (!pins::pin_exists(board, pin_name)) {
-      return(TRUE)  # No existe localmente, necesita descarga
-    }
+check_remote_file_changed <- function(url, pin_name, board, verbose = FALSE) {
+  tryCatch(
+    {
+      # Verificar si tenemos metadatos del pin local
+      if (!pins::pin_exists(board, pin_name)) {
+        return(TRUE) # No existe localmente, necesita descarga
+      }
 
-    # Obtener metadatos del pin local
-    local_meta <- pins::pin_meta(board, pin_name)
-    local_etag <- tryCatch(local_meta$user$etag, error = function(e) NULL)
-    local_last_modified <- tryCatch(local_meta$user$last_modified, error = function(e) NULL)
-    local_created <- tryCatch(local_meta$created, error = function(e) NULL)
+      # Obtener metadatos del pin local
+      local_meta <- pins::pin_meta(board, pin_name)
+      local_etag <- tryCatch(local_meta$user$etag, error = function(e) NULL)
+      local_last_modified <- tryCatch(local_meta$user$last_modified, error = function(e) NULL)
+      local_created <- tryCatch(local_meta$created, error = function(e) NULL)
 
-    # Verificar disponibilidad de httr2
-    if (!requireNamespace("httr2", quietly = TRUE)) {
-      if (verbose) message("httr2 no disponible, usando caché local")
-      return(FALSE)  # Sin httr2, asumir que no cambió (usar caché)
-    }
+      # Verificar disponibilidad de httr2
+      if (!requireNamespace("httr2", quietly = TRUE)) {
+        if (verbose) message("httr2 no disponible, usando caché local")
+        return(FALSE) # Sin httr2, asumir que no cambió (usar caché)
+      }
 
-    # Hacer petición HEAD para obtener metadatos actuales
-    resp <- tryCatch({
-      httr2::request(url) |> 
-        httr2::req_method("HEAD") |> 
-        httr2::req_perform()
-    }, error = function(e) {
-      # Muchos servidores no soportan HEAD, usar caché en ese caso
-      return(NULL)
-    })
-    
-    if (is.null(resp)) {
-      # Si falla la petición HEAD (común en CDNs), usar caché por defecto
-      # Solo forzar descarga si el pin es muy antiguo (> 24 horas)
-      if (!is.null(local_created)) {
-        hours_old <- as.numeric(difftime(Sys.time(), local_created, units = "hours"))
-        if (hours_old > 24) {
-          if (verbose) message("Pin muy antiguo (", round(hours_old, 1), " horas), forzando verificación")
-          return(TRUE)
+      # Hacer petición HEAD para obtener metadatos actuales
+      resp <- tryCatch(
+        {
+          httr2::request(url) |>
+            httr2::req_method("HEAD") |>
+            httr2::req_perform()
+        },
+        error = function(e) {
+          # Muchos servidores no soportan HEAD, usar caché en ese caso
+          return(NULL)
+        }
+      )
+
+      if (is.null(resp)) {
+        # Si falla la petición HEAD (común en CDNs), usar caché por defecto
+        # Solo forzar descarga si el pin es muy antiguo (> 24 horas)
+        if (!is.null(local_created)) {
+          hours_old <- as.numeric(difftime(Sys.time(), local_created, units = "hours"))
+          if (hours_old > 24) {
+            if (verbose) message("Pin muy antiguo (", round(hours_old, 1), " horas), forzando verificación")
+            return(TRUE)
+          }
+        }
+        return(FALSE) # Usar caché si es reciente
+      }
+
+      remote_etag <- httr2::resp_header(resp, "etag")
+      remote_last_modified <- httr2::resp_header(resp, "last-modified")
+
+      # Comparar ETag si está disponible (más confiable)
+      if (!is.null(local_etag) && !is.null(remote_etag)) {
+        return(local_etag != remote_etag)
+      }
+
+      # Comparar Last-Modified si ambos existen
+      if (!is.null(local_last_modified) && !is.null(remote_last_modified)) {
+        return(local_last_modified != remote_last_modified)
+      }
+
+      # Si no hay etag ni last_modified, comparar con fecha de creación local
+      if (!is.null(local_created) && !is.null(remote_last_modified)) {
+        # Convertir fecha remota a POSIXct
+        remote_time <- tryCatch(
+          {
+            as.POSIXct(remote_last_modified, tz = "UTC", tryFormats = c(
+              "%a, %d %b %Y %H:%M:%S %Z",
+              "%a, %d %b %Y %H:%M:%S GMT",
+              "%Y-%m-%d %H:%M:%S"
+            ))
+          },
+          error = function(e) NA
+        )
+
+        if (!is.na(remote_time)) {
+          # Dar margen de error de 2 minutos para diferencias menores
+          time_diff <- abs(as.numeric(difftime(local_created, remote_time, units = "mins")))
+          return(time_diff > 2) # Solo considerar cambio si hay más de 2 minutos de diferencia
         }
       }
-      return(FALSE)  # Usar caché si es reciente
+
+      # Si no podemos verificar, usar caché (ser conservador)
+      return(FALSE)
+    },
+    error = function(e) {
+      # En caso de error, usar caché (ser conservador)
+      if (verbose) message("Error verificando cambios remotos, usando caché local")
+      return(FALSE)
     }
-
-    remote_etag <- httr2::resp_header(resp, "etag")
-    remote_last_modified <- httr2::resp_header(resp, "last-modified")
-
-    # Comparar ETag si está disponible (más confiable)
-    if (!is.null(local_etag) && !is.null(remote_etag)) {
-      return(local_etag != remote_etag)
-    }
-
-    # Comparar Last-Modified si ambos existen
-    if (!is.null(local_last_modified) && !is.null(remote_last_modified)) {
-      return(local_last_modified != remote_last_modified)
-    }
-
-    # Si no hay etag ni last_modified, comparar con fecha de creación local
-    if (!is.null(local_created) && !is.null(remote_last_modified)) {
-      # Convertir fecha remota a POSIXct
-      remote_time <- tryCatch({
-        as.POSIXct(remote_last_modified, tz = "UTC", tryFormats = c(
-          "%a, %d %b %Y %H:%M:%S %Z", 
-          "%a, %d %b %Y %H:%M:%S GMT",
-          "%Y-%m-%d %H:%M:%S"
-        ))
-      }, error = function(e) NA)
-      
-      if (!is.na(remote_time)) {
-        # Dar margen de error de 2 minutos para diferencias menores
-        time_diff <- abs(as.numeric(difftime(local_created, remote_time, units = "mins")))
-        return(time_diff > 2)  # Solo considerar cambio si hay más de 2 minutos de diferencia
-      }
-    }
-
-    # Si no podemos verificar, usar caché (ser conservador)
-    return(FALSE)
-
-  }, error = function(e) {
-    # En caso de error, usar caché (ser conservador)
-    if (verbose) message("Error verificando cambios remotos, usando caché local")
-    return(FALSE)
-  })
+  )
 }
 
 #' Descarga, procesa y cachea un archivo de datos espaciales
@@ -117,20 +125,20 @@ check_remote_file_changed <- function(url, pin_name, board, verbose = TRUE) {
 #'
 #' @param id El nombre del archivo en el servidor remoto (ej. "RD_MREG").
 #' @param force_download Logical. Si TRUE, fuerza la descarga ignorando el caché. Default FALSE.
-#' @param verbose Logical. Si TRUE, muestra mensajes informativos. Default TRUE.
+#' @param verbose Logical. Si TRUE, muestra mensajes informativos. Default FALSE.
 #' @param ... Argumentos adicionales para sf::st_read().
 #' @return Un objeto sf.
 #' @noRd
-fetch_and_cache <- function(id, force_download = FALSE, verbose = TRUE, ...) {
+fetch_and_cache <- function(id, force_download = FALSE, verbose = FALSE, ...) {
   # browser()
   local_board <- get_geodom_cache()
   base_url <- get_base_data_url()
-  full_url <- paste0(base_url, 'TopoJSON/', id, ".json")
+  full_url <- paste0(base_url, "TopoJSON/", id, ".json")
 
   # 1. VERIFICAR CACHÉ Y SI EL ARCHIVO REMOTO HA CAMBIADO
-  if (!force_download && 
-      pins::pin_exists(local_board, id) && 
-      !check_remote_file_changed(full_url, id, local_board, verbose)) {
+  if (!force_download &&
+    pins::pin_exists(local_board, id) &&
+    !check_remote_file_changed(full_url, id, local_board, verbose)) {
     if (verbose) message("Cargando '", id, "' desde cach\u00e9 local (sin cambios remotos).")
     return(sf::st_as_sf(pins::pin_read(local_board, id)))
   }
@@ -145,22 +153,25 @@ fetch_and_cache <- function(id, force_download = FALSE, verbose = TRUE, ...) {
   }
 
   # Obtener metadatos del archivo remoto antes de descargar
-  remote_meta <- tryCatch({
-    if (requireNamespace("httr2", quietly = TRUE)) {
-      resp <- httr2::request(full_url) |> 
-        httr2::req_method("HEAD") |> 
-        httr2::req_perform()
-      
-      list(
-        etag = httr2::resp_header(resp, "etag"),
-        last_modified = httr2::resp_header(resp, "last-modified")
-      )
-    } else {
+  remote_meta <- tryCatch(
+    {
+      if (requireNamespace("httr2", quietly = TRUE)) {
+        resp <- httr2::request(full_url) |>
+          httr2::req_method("HEAD") |>
+          httr2::req_perform()
+
+        list(
+          etag = httr2::resp_header(resp, "etag"),
+          last_modified = httr2::resp_header(resp, "last-modified")
+        )
+      } else {
+        list(etag = NULL, last_modified = NULL)
+      }
+    },
+    error = function(e) {
       list(etag = NULL, last_modified = NULL)
     }
-  }, error = function(e) {
-    list(etag = NULL, last_modified = NULL)
-  })
+  )
 
   data_sf <- tryCatch(
     {
@@ -194,16 +205,16 @@ fetch_and_cache <- function(id, force_download = FALSE, verbose = TRUE, ...) {
   return(data_sf)
 }
 
-gd_get_dataset <- function(id, force_download = FALSE, verbose = TRUE, ...) {
+gd_get_dataset <- function(id, force_download = FALSE, verbose = FALSE, ...) {
   # browser()
   local_board <- get_geodom_cache()
   base_url <- get_base_data_url()
-  full_url <- paste0(base_url, 'datasets/', id, ".json")
+  full_url <- paste0(base_url, "datasets/", id, ".json")
 
   # 1. VERIFICAR CACHÉ Y SI EL ARCHIVO REMOTO HA CAMBIADO
-  if (!force_download && 
-      pins::pin_exists(local_board, id) && 
-      !check_remote_file_changed(full_url, id, local_board, verbose)) {
+  if (!force_download &&
+    pins::pin_exists(local_board, id) &&
+    !check_remote_file_changed(full_url, id, local_board, verbose)) {
     if (verbose) message("Cargando '", id, "' desde cach\u00e9 local (sin cambios remotos).")
     return(pins::pin_read(local_board, id))
   }
@@ -218,22 +229,25 @@ gd_get_dataset <- function(id, force_download = FALSE, verbose = TRUE, ...) {
   }
 
   # Obtener metadatos del archivo remoto antes de descargar
-  remote_meta <- tryCatch({
-    if (requireNamespace("httr2", quietly = TRUE)) {
-      resp <- httr2::request(full_url) |> 
-        httr2::req_method("HEAD") |> 
-        httr2::req_perform()
-      
-      list(
-        etag = httr2::resp_header(resp, "etag"),
-        last_modified = httr2::resp_header(resp, "last-modified")
-      )
-    } else {
+  remote_meta <- tryCatch(
+    {
+      if (requireNamespace("httr2", quietly = TRUE)) {
+        resp <- httr2::request(full_url) |>
+          httr2::req_method("HEAD") |>
+          httr2::req_perform()
+
+        list(
+          etag = httr2::resp_header(resp, "etag"),
+          last_modified = httr2::resp_header(resp, "last-modified")
+        )
+      } else {
+        list(etag = NULL, last_modified = NULL)
+      }
+    },
+    error = function(e) {
       list(etag = NULL, last_modified = NULL)
     }
-  }, error = function(e) {
-    list(etag = NULL, last_modified = NULL)
-  })
+  )
 
   data_sf <- tryCatch(
     {
@@ -266,4 +280,3 @@ gd_get_dataset <- function(id, force_download = FALSE, verbose = TRUE, ...) {
 
   return(data_sf)
 }
-  

@@ -1,5 +1,12 @@
 # R/dm.R
 
+# TODO: Implementar funciones de limpieza para distritos municipales:
+# TODO: - gd_clean_dm_name() función exportada
+# TODO: - .get_dm_alias() helper function
+# TODO: - .do_dm_names_cleaning() función interna
+# TODO: - Crear dataset dm_alias en geodom-data-contributions
+# TODO: Esto mejorará significativamente la detección automática de distritos municipales
+
 #' Obtener Límites de los Distritos Municipales de la República Dominicana
 #'
 #' Descarga (si es necesario) y carga los límites de los distritos municipales

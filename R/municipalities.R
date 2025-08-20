@@ -1,5 +1,12 @@
 # R/municipalities.R
 
+# TODO: Implementar funciones de limpieza para municipios:
+# TODO: - gd_clean_municipality_name() función exportada
+# TODO: - .get_municipalities_alias() helper function
+# TODO: - .do_municipality_names_cleaning() función interna
+# TODO: - Crear dataset municipalities_alias en geodom-data-contributions
+# TODO: Esto mejorará significativamente la detección automática de municipios
+
 #' Obtener Límites de los Municipios de la República Dominicana
 #'
 #' Descarga (si es necesario) y carga los límites de los municipios de la
@@ -19,11 +26,11 @@
 #' @importFrom sf st_drop_geometry
 #' @examples
 #' \dontrun{
-#'   # Cargar el objeto sf completo
-#'   municipios_sf <- gd_municipalities()
+#' # Cargar el objeto sf completo
+#' municipios_sf <- gd_municipalities()
 #'
-#'   # Cargar solo la tabla de atributos (sin geometría)
-#'   municipios_df <- gd_municipalities(sf = FALSE)
+#' # Cargar solo la tabla de atributos (sin geometría)
+#' municipios_df <- gd_municipalities(sf = FALSE)
 #' }
 gd_municipalities <- function(id = "RD_MUN158", sf = TRUE) {
   data_sf <- fetch_and_cache(id = id)

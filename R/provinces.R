@@ -106,5 +106,5 @@ gd_clean_prov_name <- function(prov, .tol = 0.25, .on_error = "fail") {
   alias_data <- .get_provincias_alias()
   
   # Usar la función de limpieza de geodomR adaptada para provincias
-  .do_prov_names_cleaning(prov, alias_data, .tol, .on_error)
+  .do_prov_names_cleaning_robust(prov, alias_data, .tol, .on_error)
 }

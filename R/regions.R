@@ -221,44 +221,9 @@ gd_regions <- function(id = "RD_RUP", sf = TRUE, verbose = FALSE) {
 #' gd_clean_region_name("cibaooo", .tol = 0.8, .on_error = "na")
 #' }
 gd_clean_region_name <- function(reg, .tol = 0.25, .on_error = "fail") {
-  # Implementación simplificada que garantiza preservar la longitud del vector
+  # Get alias data
+  alias_data <- .get_regiones_alias()
   
-  # Si el input está vacío, retornar vacío
-  if (length(reg) == 0) {
-    return(character(0))
-  }
-  
-  # Crear resultado del mismo tamaño que la entrada
-  result <- character(length(reg))
-  
-  # Para cada elemento, aplicar limpieza básica sin expansión
-  for (i in seq_along(reg)) {
-    current <- reg[i]
-    
-    # Si es NA, mantener como NA
-    if (is.na(current)) {
-      result[i] <- NA_character_
-      next
-    }
-    
-    # Limpiar el texto básico
-    clean_name <- stringr::str_to_title(stringr::str_trim(as.character(current)))
-    
-    # Mapeo manual de regiones conocidas para evitar problemas
-    result[i] <- dplyr::case_when(
-      stringr::str_detect(clean_name, stringr::regex("cibao.*norte|norte|cnt", ignore_case = TRUE)) ~ "Cibao Norte",
-      stringr::str_detect(clean_name, stringr::regex("cibao.*sur|sur|csr", ignore_case = TRUE)) ~ "Cibao Sur", 
-      stringr::str_detect(clean_name, stringr::regex("cibao.*nordeste|nordeste|cnd", ignore_case = TRUE)) ~ "Cibao Nordeste",
-      stringr::str_detect(clean_name, stringr::regex("cibao.*noroeste|noroeste|cno", ignore_case = TRUE)) ~ "Cibao Noroeste",
-      stringr::str_detect(clean_name, stringr::regex("valdesia|vld", ignore_case = TRUE)) ~ "Valdesia",
-      stringr::str_detect(clean_name, stringr::regex("enriquillo|enr", ignore_case = TRUE)) ~ "Enriquillo",
-      stringr::str_detect(clean_name, stringr::regex("valle|vll", ignore_case = TRUE)) ~ "El Valle",
-      stringr::str_detect(clean_name, stringr::regex("yuma|yum", ignore_case = TRUE)) ~ "Del Yuma",
-      stringr::str_detect(clean_name, stringr::regex("higuamo|hig", ignore_case = TRUE)) ~ "Higuamo",
-      stringr::str_detect(clean_name, stringr::regex("ozama|ozm", ignore_case = TRUE)) ~ "Ozama",
-      TRUE ~ clean_name  # Si no coincide con ninguno, usar el nombre limpio
-    )
-  }
-  
-  return(result)
+  # Use the robust cleaning function
+  .do_region_names_cleaning(reg, alias_data, .tol, .on_error)
 }

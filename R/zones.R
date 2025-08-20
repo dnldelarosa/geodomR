@@ -61,5 +61,5 @@ gd_clean_zone_name <- function(names, .tol = 0.25, .on_error = "fail") {
   alias_data <- .get_zones_alias()
   
   # Usar función similar a la de provincias y regiones
-  .do_zone_names_cleaning(names, alias_data, zones_data, .tol, .on_error)
+  .do_zone_names_cleaning_robust(names, alias_data, zones_data, .tol, .on_error)
 }

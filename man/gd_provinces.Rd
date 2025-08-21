@@ -4,7 +4,7 @@
 \alias{gd_provinces}
 \title{Obtener Límites de las Provincias de la República Dominicana}
 \usage{
-gd_provinces(id = "RD_PROV", sf = TRUE, .reg = NULL)
+gd_provinces(id = "RD_PROV", sf = TRUE, .reg = NULL, verbose = FALSE)
 }
 \arguments{
 \item{id}{Nombre del archivo de datos en el servidor remoto. Por defecto es \code{"RD_PROV"}.}
@@ -14,6 +14,9 @@ columna de geometría. Por defecto es \code{TRUE}.}
 
 \item{.reg}{Caracter. Si es \code{"rup"}, agrega la columna de región administrativa
 según la Ley 345-22. Por defecto es \code{NULL}.}
+
+\item{verbose}{Lógico. Si es \code{TRUE}, muestra mensajes de progreso durante la
+descarga y procesamiento de datos. Por defecto es \code{FALSE}.}
 }
 \value{
 Un objeto de la clase \code{sf} o un \code{data.frame}, dependiendo del valor de \code{sf}.

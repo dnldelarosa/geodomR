@@ -108,3 +108,117 @@ gd_clean_prov_name <- function(prov, .tol = 0.25, .on_error = "fail") {
   # Usar la función de limpieza de geodomR adaptada para provincias
   .do_prov_names_cleaning_robust(prov, alias_data, .tol, .on_error)
 }
+
+
+
+
+
+# Helper function for robust province name cleaning
+.do_prov_names_cleaning_robust <- function(names, alias_data, .tol = 0.25, .on_error = "fail") {
+  # Validación de entrada
+  if (length(names) == 0) {
+    return(character(0))
+  }
+  
+  # Limpiar los nombres de entrada
+  names_clean <- .text_cleaning(names)
+  
+  # Crear un dataframe con todas las variantes de alias
+  alias_clean <- alias_data %>%
+    dplyr::mutate(
+      PROV_NAME_CLEAN = .text_cleaning(PROV_NAME)
+    ) %>%
+    # Remover duplicados manteniendo el nombre oficial (el primero en orden alfabético)
+    dplyr::arrange(PROV_ID, PROV_NAME) %>%
+    dplyr::group_by(PROV_ID) %>%
+    dplyr::mutate(
+      PROV_NAME_OFFICIAL = dplyr::first(PROV_NAME)
+    ) %>%
+    dplyr::ungroup()
+  
+  # Inicializar vector de resultados con la misma longitud que la entrada
+  result <- character(length(names))
+  
+  # Procesar cada nombre individualmente para preservar la longitud del vector
+  for (i in seq_along(names)) {
+    current_name <- names[i]
+    current_clean <- names_clean[i]
+    
+    # Buscar coincidencia exacta primero
+    exact_match <- alias_clean %>%
+      dplyr::filter(PROV_NAME_CLEAN == current_clean) %>%
+      dplyr::slice(1)
+    
+    if (nrow(exact_match) > 0) {
+      result[i] <- exact_match$PROV_NAME_OFFICIAL
+      next
+    }
+    
+    # Si no hay coincidencia exacta, buscar por prefijo
+    prefix_candidates <- alias_clean %>%
+      dplyr::filter(PROV_NAME_CLEAN != "_na_") %>%
+      dplyr::filter(startsWith(PROV_NAME_CLEAN, current_clean)) %>%
+      dplyr::arrange(nchar(PROV_NAME_CLEAN))
+    
+    if (nrow(prefix_candidates) > 0) {
+      result[i] <- prefix_candidates$PROV_NAME_OFFICIAL[1]
+      next
+    }
+    
+    # Si no hay prefix match, usar fuzzy matching
+    distances <- alias_clean %>%
+      dplyr::filter(PROV_NAME_CLEAN != "_na_") %>%
+      dplyr::mutate(
+        distance = stringdist::stringdist(current_clean, PROV_NAME_CLEAN, method = "lv"),
+        distance_norm = pmax(distance / nchar(current_clean), distance / nchar(PROV_NAME_CLEAN)),
+        starts_with_input = ifelse(startsWith(PROV_NAME_CLEAN, current_clean), 0.2, 0),
+        input_starts_with_name = ifelse(startsWith(current_clean, PROV_NAME_CLEAN), 0.1, 0),
+        abbreviation_bonus = 0,
+        length_penalty = ifelse(nchar(PROV_NAME_CLEAN) > nchar(current_clean) * 2, 0.05, 0),
+        total_score = distance_norm - starts_with_input - input_starts_with_name - abbreviation_bonus + length_penalty
+      ) %>%
+      dplyr::arrange(total_score, nchar(PROV_NAME_CLEAN))
+    
+    if (nrow(distances) > 0) {
+      best_match <- distances[1, ]
+      
+      if (best_match$total_score <= .tol) {
+        result[i] <- best_match$PROV_NAME_OFFICIAL
+      } else {
+        # Manejar casos que exceden tolerancia
+        if (.on_error == "fail") {
+          cli::cli_abort(
+            c(
+              "x" = "Nombre de provincia no pudo emparejarse con la tolerancia especificada:",
+              " " = paste0("'", current_name, "' -> '", best_match$PROV_NAME_OFFICIAL, "' (tolerancia: ", round(best_match$total_score, 3), ")"),
+              "i" = "Considera aumentar .tol o usar .on_error = 'na' o 'omit'"
+            )
+          )
+        } else if (.on_error == "na") {
+          result[i] <- NA_character_
+        } else if (.on_error == "omit") {
+          result[i] <- current_name
+        } else {
+          result[i] <- best_match$PROV_NAME_OFFICIAL
+        }
+      }
+    } else {
+      # Sin candidatos
+      if (.on_error == "fail") {
+        cli::cli_abort(
+          c(
+            "x" = "No se encontraron candidatos para el nombre de provincia:",
+            " " = paste0("'", current_name, "'"),
+            "i" = "Verifica que el nombre esté bien escrito"
+          )
+        )
+      } else if (.on_error == "na") {
+        result[i] <- NA_character_
+      } else if (.on_error == "omit") {
+        result[i] <- current_name
+      }
+    }
+  }
+  
+  return(result)
+}

@@ -4,13 +4,16 @@
 \alias{gd_regions}
 \title{Obtener Límites de las Regiones de Planificación}
 \usage{
-gd_regions(id = "RD_RUP", sf = TRUE)
+gd_regions(id = "RD_RUP", sf = TRUE, verbose = FALSE)
 }
 \arguments{
 \item{id}{Nombre del archivo de datos en el servidor remoto.}
 
 \item{sf}{Lógico. Si es \code{FALSE}, devuelve un data.frame regular sin la
 columna de geometría. Por defecto es \code{TRUE}.}
+
+\item{verbose}{Lógico. Si es \code{TRUE}, muestra mensajes informativos durante la
+descarga y carga de datos. Por defecto es \code{FALSE}.}
 }
 \value{
 Un objeto de la clase \code{sf} o un \code{data.frame}.
@@ -28,10 +31,10 @@ Las regionalizaciones disponibles son:
 }
 \examples{
 \dontrun{
-  # Cargar el objeto sf completo
-  regiones_sf <- gd_regions()
+# Cargar el objeto sf completo
+regiones_sf <- gd_regions()
 
-  # Cargar solo la tabla de atributos (sin geometría)
-  regiones_df <- gd_regions(sf = FALSE)
+# Cargar solo la tabla de atributos (sin geometría)
+regiones_df <- gd_regions(sf = FALSE)
 }
 }

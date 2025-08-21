@@ -3,6 +3,7 @@
 export("%>%")
 export(gd_analyze_columns)
 export(gd_bparajes)
+export(gd_clean_municipality_name)
 export(gd_clean_prov_name)
 export(gd_clean_region_name)
 export(gd_clean_zone_name)

@@ -28,10 +28,10 @@ Las divisiones disponibles son:
 }
 \examples{
 \dontrun{
-  # Cargar el objeto sf completo
-  municipios_sf <- gd_municipalities()
+# Cargar el objeto sf completo
+municipios_sf <- gd_municipalities()
 
-  # Cargar solo la tabla de atributos (sin geometría)
-  municipios_df <- gd_municipalities(sf = FALSE)
+# Cargar solo la tabla de atributos (sin geometría)
+municipios_df <- gd_municipalities(sf = FALSE)
 }
 }

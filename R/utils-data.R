@@ -178,6 +178,10 @@ fetch_and_cache <- function(id, force_download = FALSE, verbose = FALSE, ...) {
       sf::st_read(full_url, quiet = TRUE, ...)
     },
     error = function(e) {
+      if (pins::pin_exists(local_board, id)) {
+        warning("Fallo al descargar datos remotos. Usando versión en caché (puede estar desactualizada). Error: ", e$message, call. = FALSE)
+        return(structure(sf::st_as_sf(pins::pin_read(local_board, id)), from_cache_fallback = TRUE))
+      }
       stop(
         "La descarga y lectura del archivo fall\u00f3.\n  URL: ",
         full_url,
@@ -186,6 +190,12 @@ fetch_and_cache <- function(id, force_download = FALSE, verbose = FALSE, ...) {
       )
     }
   )
+
+  # Si recuperamos del caché por fallo, retornamos directamente sin escribir pin
+  if (isTRUE(attr(data_sf, "from_cache_fallback"))) {
+    attr(data_sf, "from_cache_fallback") <- NULL
+    return(data_sf)
+  }
 
   # 3. GUARDAR EL OBJETO PROCESADO EN CACHÉ CON METADATOS
   pins::pin_write(
@@ -254,6 +264,10 @@ gd_get_dataset <- function(id, force_download = FALSE, verbose = FALSE, ...) {
       jsonlite::fromJSON(full_url, simplifyVector = TRUE)
     },
     error = function(e) {
+      if (pins::pin_exists(local_board, id)) {
+        warning("Fallo al descargar datos remotos. Usando versión en caché (puede estar desactualizada). Error: ", e$message, call. = FALSE)
+        return(structure(pins::pin_read(local_board, id), from_cache_fallback = TRUE))
+      }
       stop(
         "La descarga y lectura del archivo fall\u00f3.\n  URL: ",
         full_url,
@@ -262,6 +276,12 @@ gd_get_dataset <- function(id, force_download = FALSE, verbose = FALSE, ...) {
       )
     }
   )
+
+  # Si recuperamos del caché por fallo, retornamos directamente sin escribir pin
+  if (isTRUE(attr(data_sf, "from_cache_fallback"))) {
+    attr(data_sf, "from_cache_fallback") <- NULL
+    return(data_sf)
+  }
 
   # 3. GUARDAR EL OBJETO PROCESADO EN CACHÉ CON METADATOS
   pins::pin_write(

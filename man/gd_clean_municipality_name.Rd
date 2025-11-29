@@ -2,38 +2,38 @@
 % Please edit documentation in R/municipalities.R
 \name{gd_clean_municipality_name}
 \alias{gd_clean_municipality_name}
-\title{Clean and standardize Dominican Republic municipality names}
+\title{Limpia y estandariza los nombres de municipios de la República Dominicana}
 \usage{
 gd_clean_municipality_name(mun, .tol = 0.25, .on_error = "fail")
 }
 \arguments{
-\item{mun}{Character vector of municipality names to be cleaned.}
+\item{mun}{Vector de caracteres con los nombres de municipios a limpiar.}
 
-\item{.tol}{Numeric tolerance level for string similarity. Defaults to 0.25.
-This parameter controls how similar two strings must be to be considered a match.
-A lower value means stricter matching.}
+\item{.tol}{Nivel de tolerancia numérica para la similitud de cadenas. Por defecto es 0.25.
+Este parámetro controla cuán similares deben ser dos cadenas para considerarse una coincidencia.
+Un valor más bajo significa una coincidencia más estricta.}
 
-\item{.on_error}{Character string specifying the error handling method. Defaults to "fail".
-It can be one of the following: "fail" to stop execution on error,
-"omit" to ignore unmatched names, or "na" to return NA for unmatched names.}
+\item{.on_error}{Cadena de caracteres que especifica el método de manejo de errores. Por defecto es "fail".
+Puede ser uno de los siguientes: "fail" para detener la ejecución en caso de error,
+"omit" para ignorar los nombres no coincidentes, o "na" para devolver NA en los nombres no coincidentes.}
 }
 \value{
-A cleaned character vector of municipality names.
+Un vector de caracteres con los nombres de municipios limpiados.
 }
 \description{
-This function cleans and standardizes the names of municipalities in the Dominican Republic,
-with tolerance for string similarity and options for error handling. Uses the official
-Dominican Republic municipal code system.
+Esta función limpia y estandariza los nombres de los municipios en la República Dominicana,
+con tolerancia para la similitud de cadenas y opciones para el manejo de errores. Utiliza
+el sistema oficial de códigos municipales de la República Dominicana.
 }
 \examples{
 \dontrun{
-# Basic usage with municipality names
-cleaned_mun_names <- gd_clean_municipality_name(c("santiago", "moca", "bonao"))
+# Uso básico con nombres de municipios
+nombres_mun_limpios <- gd_clean_municipality_name(c("santiago", "moca", "bonao"))
 
-# With prefix variants
+# Con variantes de prefijos
 gd_clean_municipality_name(c("Municipio de Santiago", "Mun. Moca"))
 
-# With tolerance and error handling
+# Con tolerancia y manejo de errores
 gd_clean_municipality_name("santiagooo", .tol = 0.8, .on_error = "na")
 }
 }

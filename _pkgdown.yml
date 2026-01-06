@@ -1,0 +1,62 @@
+url: https://geodomproject.github.io/geodomR/
+
+template:
+  bootstrap: 5
+  bootswatch: flatly
+
+lang: es
+
+authors:
+  Daniel E. de la Rosa:
+    href: http://dnldelarosa.com
+  Adatar:
+    html: <div><img src="https://raw.githubusercontent.com/adatar-do/adatar-do.github.io/main/logotipo.png"
+      alt="Adatar" height="20"> <span style="font-weight:900; margin:10px;">Adatar</span></div>
+    href: http://adatar.do
+  sidebar:
+    roles:
+    - aut
+    - cph
+
+reference:
+  - title: "Datos Geográficos"
+    desc: "Funciones para obtener límites administrativos de la República Dominicana"
+    contents:
+      - gd_provinces
+      - gd_regions
+      - gd_municipalities
+      - gd_dm
+      - gd_sections
+      - gd_bparajes
+      - gd_zones
+      - gd_macroregions
+
+  - title: "Mapeo"
+    desc: "Funciones para crear mapas coropléticos"
+    contents:
+      - gd_map
+      - gd_map_data
+      - gd_ggplot
+      - gd_geom_sf
+
+  - title: "Detección Automática"
+    desc: "Funciones para detectar nivel geográfico y variables"
+    contents:
+      - gd_detect_level
+      - gd_detect_fill
+      - gd_detect_column_type
+      - gd_analyze_columns
+
+  - title: "Limpieza de Nombres"
+    desc: "Funciones para estandarizar nombres de unidades administrativas"
+    contents:
+      - gd_clean_prov_name
+      - gd_clean_region_name
+      - gd_clean_zone_name
+      - gd_clean_municipality_name
+
+articles:
+  - title: "Guías"
+    navbar: ~
+    contents:
+      - mapeo

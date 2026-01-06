@@ -33,4 +33,5 @@ Imports:
     stringdist,
     cli,
     tidyr,
-    httr2
+    httr2,
+    ggplot2

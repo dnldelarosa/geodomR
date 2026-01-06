@@ -1,0 +1,158 @@
+---
+title: "Funciones de Mapeo en geodomR"
+author: "geodomR"
+output: rmarkdown::html_vignette
+vignette: >
+  %\VignetteIndexEntry{Funciones de Mapeo en geodomR}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+---
+
+```{r setup, include = FALSE}
+knitr::opts_chunk$set(
+    collapse = TRUE,
+    comment = "#>",
+    warning = FALSE,
+    message = FALSE,
+    fig.width = 8,
+    fig.height = 6
+)
+```
+
+## Introducción
+
+El paquete `geodom` incluye funciones para crear mapas coropléticos de República Dominicana de forma sencilla. La característica principal es la **detección automática** tanto del nivel geográfico como de la variable de llenado (fill).
+
+```{r}
+library(geodom)
+library(ggplot2)
+```
+
+## Datos de Ejemplo
+
+Creamos un dataset de ejemplo con datos por provincia:
+
+```{r datos-ejemplo}
+datos_provincias <- data.frame(
+    provincia = c(
+        "Santo Domingo", "Santiago", "La Vega",
+        "San Cristóbal", "La Romana", "Puerto Plata"
+    ),
+    poblacion = c(2500000, 1000000, 400000, 550000, 250000, 320000),
+    tasa_pobreza = c(15.2, 22.5, 35.8, 28.4, 18.9, 25.3),
+    categoria = c("A", "B", "C", "B", "A", "B")
+)
+
+datos_provincias
+```
+
+## 1. `gd_detect_level()` - Detección del Nivel Geográfico
+
+Esta función examina los datos y detecta automáticamente qué nivel administrativo representan:
+
+```{r detect-level}
+info <- gd_detect_level(datos_provincias)
+info
+```
+
+El sistema detectó que:
+
+- **Nivel:** `r info$level` (provincias)
+- **Variable en los datos:** `r info$name`
+- **Variable clave para unión:** `r info$key`
+
+## 2. `gd_detect_fill()` - Detección de Variable para Fill
+
+Esta función usa métricas estadísticas para seleccionar la mejor variable para colorear el mapa:
+
+- **Variables numéricas:** Coeficiente de variación (más variación = más interesante)
+- **Variables categóricas:** Entropía de Shannon (más diversidad = más interesante)
+
+```{r detect-fill}
+# Excluimos la variable geográfica
+fill_var <- gd_detect_fill(datos_provincias, exclude = "provincia")
+fill_var
+```
+
+## 3. `gd_map_data()` - Preparar Datos para Mapeo
+
+Une los datos con las geometrías del nivel detectado:
+
+```{r map-data}
+map_data <- gd_map_data(datos_provincias)
+
+# Verificar resultado
+class(map_data)
+head(map_data[, c("TOPONIMIA", "poblacion", "tasa_pobreza")])
+```
+
+## 4. `gd_map()` - Crear Mapa Completo
+
+La función principal. **Sin argumentos obligatorios** - todo se detecta automáticamente:
+
+```{r mapa-simple}
+gd_map(datos_provincias)
+```
+
+### Con argumentos explícitos
+
+Puedes especificar la variable de fill y otros parámetros de estilo:
+
+```{r mapa-pobreza}
+gd_map(datos_provincias, fill = "tasa_pobreza", color = "white", linewidth = 0.3) +
+    scale_fill_viridis_c(option = "plasma", name = "Tasa de\nPobreza (%)") +
+    labs(title = "Tasa de Pobreza por Provincia")
+```
+
+### Con variables categóricas
+
+```{r mapa-categorico}
+gd_map(datos_provincias, fill = "categoria", color = "white", linewidth = 0.3) +
+    scale_fill_brewer(palette = "Set2", name = "Categoría") +
+    labs(title = "Clasificación por Categoría")
+```
+
+## 5. `gd_ggplot()` y `gd_geom_sf()` - API Flexible
+
+Para mayor control, puedes usar estas funciones para construir el mapa paso a paso:
+
+```{r api-flexible}
+gd_ggplot(datos_provincias) +
+    geom_sf(aes(fill = poblacion), color = "gray30", linewidth = 0.2) +
+    scale_fill_gradient(
+        low = "lightyellow", high = "darkred",
+        labels = scales::comma, name = "Población"
+    ) +
+    labs(
+        title = "Población por Provincia",
+        subtitle = "República Dominicana"
+    ) +
+    theme_void() +
+    theme(legend.position = "bottom")
+```
+
+## Otros Niveles Geográficos
+
+Las funciones funcionan con cualquier nivel administrativo disponible en geodom:
+
+```{r regiones}
+datos_regiones <- data.frame(
+    region = c("Cibao Norte", "Cibao Sur", "Valdesia", "Ozama"),
+    indicador = c(85, 72, 68, 91)
+)
+
+gd_map(datos_regiones) +
+    scale_fill_viridis_c(option = "cividis", name = "Indicador") +
+    labs(title = "Indicador por Región")
+```
+
+## Resumen
+
+| Función | Uso |
+|---------|-----|
+| `gd_detect_level()` | Detectar nivel geográfico automáticamente |
+| `gd_detect_fill()` | Detectar mejor variable para fill |
+| `gd_map_data()` | Preparar datos unidos a geometrías |
+| `gd_map()` | Crear mapa coroplético completo |
+| `gd_ggplot()` | Inicializar ggplot para personalización |
+| `gd_geom_sf()` | Agregar capa geom_sf con autodetección |

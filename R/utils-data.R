@@ -57,16 +57,11 @@ check_remote_file_changed <- function(url, pin_name, board, verbose = FALSE) {
       )
 
       if (is.null(resp)) {
-        # Si falla la petición HEAD (común en CDNs), usar caché por defecto
-        # Solo forzar descarga si el pin es muy antiguo (> 24 horas)
-        if (!is.null(local_created)) {
-          hours_old <- as.numeric(difftime(Sys.time(), local_created, units = "hours"))
-          if (hours_old > 24) {
-            if (verbose) message("Pin muy antiguo (", round(hours_old, 1), " horas), forzando verificación")
-            return(TRUE)
-          }
-        }
-        return(FALSE) # Usar caché si es reciente
+        # Si falla la petición HEAD, probablemente no hay conexión a internet.
+        # Usar caché sin importar la antigüedad. El usuario puede usar
+        # force_download = TRUE si desea forzar una actualización.
+        if (verbose) message("No se pudo contactar al servidor. Usando caché local.")
+        return(FALSE)
       }
 
       remote_etag <- httr2::resp_header(resp, "etag")

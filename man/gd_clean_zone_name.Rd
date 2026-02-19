@@ -4,17 +4,17 @@
 \alias{gd_clean_zone_name}
 \title{Limpiar y estandarizar nombres de zonas de residencia}
 \usage{
-gd_clean_zone_name(names, .tol = 0.25, .on_error = "fail")
+gd_clean_zone_name(zone, .tol = 0.25, .on_error = "fail")
 }
 \arguments{
-\item{names}{Vector de nombres de zonas a limpiar}
+\item{zone}{Vector de nombres de zonas a limpiar.}
 
-\item{.tol}{Tolerancia para coincidencias fuzzy (0 a 1, por defecto 0.25)}
+\item{.tol}{Tolerancia para coincidencias fuzzy (0 a 1, por defecto 0.25).}
 
-\item{.on_error}{Acción en caso de error: "fail", "na" o "omit" (por defecto "fail")}
+\item{.on_error}{Acción en caso de error: "fail", "na" o "omit" (por defecto "fail").}
 }
 \value{
-Vector de nombres de zonas estandarizados
+Vector de nombres de zonas estandarizados.
 }
 \description{
 Limpiar y estandarizar nombres de zonas de residencia
@@ -22,7 +22,6 @@ Limpiar y estandarizar nombres de zonas de residencia
 \examples{
 \dontrun{
   # Limpiar nombres de zonas
-  clean_zones <- gd_clean_zone_name(c("zona urbana", "campo", "ciudad"))
-  print(clean_zones)  # "Urbana" "Rural" "Urbana"
+  gd_clean_zone_name(c("zona urbana", "campo", "ciudad"))
 }
 }

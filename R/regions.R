@@ -1,6 +1,6 @@
 # Evitar NOTEs de variables globales en dplyr
 utils::globalVariables(c(
-  "REG_ID", "priority", "REG_NAME", "REG_NAME_CLEAN", "REG_NAME_OFFICIAL", "distance"
+  "REG_ID", "REG_NAME", "REG_NAME_CLEAN", "REG_NAME_OFFICIAL", "distance"
 ))
 # R/regions.R
 
@@ -56,140 +56,14 @@ gd_regions <- function(id = "RD_RUP", sf = TRUE, verbose = FALSE) {
 
 # Specific function for cleaning region names using alias dataset
 .do_region_names_cleaning <- function(names, alias_data, .tol = 0.25, .on_error = "fail") {
-  # Handle special cases
-  names <- ifelse(is.na(names), "_NA_", as.character(names))
-
-  # Clean input names
-  names_clean <- .text_cleaning(names)
-
-  # Create a unique lookup table by getting the official name for each region
-  # Official names should be the full region names that start with specific patterns
-  official_names <- alias_data %>%
-    dplyr::arrange(REG_ID) %>%
-    dplyr::group_by(REG_ID) %>%
-    dplyr::mutate(
-      # Prioritize names that represent the full official region name
-      priority = dplyr::case_when(
-        REG_NAME %in% c(
-          "Cibao Norte", "Cibao Sur", "Cibao Nordeste", "Cibao Noroeste",
-          "Valdesia", "Enriquillo", "El Valle", "Del Yuma", "Higuamo", "Ozama"
-        ) ~ 1,
-        startsWith(REG_NAME, "Región ") ~ 2, # Secondary priority for "Región X" format
-        TRUE ~ 3 # Lower priority for aliases
-      )
-    ) %>%
-    dplyr::arrange(REG_ID, priority, REG_NAME) %>%
-    dplyr::slice(1) %>% # Take highest priority name
-    dplyr::ungroup() %>%
-    dplyr::select(REG_ID, REG_NAME_OFFICIAL = REG_NAME)
-
-  # Create lookup table with all aliases pointing to official names
-  alias_lookup <- alias_data %>%
-    dplyr::left_join(official_names, by = "REG_ID") %>%
-    dplyr::mutate(
-      REG_NAME_CLEAN = .text_cleaning(REG_NAME)
-    ) %>%
-    dplyr::select(REG_NAME_CLEAN, REG_NAME_OFFICIAL) %>%
-    dplyr::distinct()
-
-  # Process each input name individually
-  results <- character(length(names))
-
-  for (i in seq_along(names)) {
-    current_name <- names[i]
-    current_clean <- names_clean[i]
-
-    # Handle NA case
-    if (current_clean == "_na_") {
-      results[i] <- "_NA_"
-      next
-    }
-
-    # Try exact match first
-    exact_match <- alias_lookup %>%
-      dplyr::filter(REG_NAME_CLEAN == current_clean)
-
-    if (nrow(exact_match) > 0) {
-      results[i] <- exact_match$REG_NAME_OFFICIAL[1]
-      next
-    }
-
-    # Remove common prefixes for better matching
-    current_clean_no_prefix <- gsub("^(region|reg)\\s+", "", current_clean, ignore.case = TRUE)
-    if (current_clean_no_prefix != current_clean) {
-      exact_match_no_prefix <- alias_lookup %>%
-        dplyr::filter(REG_NAME_CLEAN == current_clean_no_prefix)
-
-      if (nrow(exact_match_no_prefix) > 0) {
-        results[i] <- exact_match_no_prefix$REG_NAME_OFFICIAL[1]
-        next
-      }
-    }
-
-    # Try partial/prefix matching (input is part of alias)
-    prefix_matches <- alias_lookup %>%
-      dplyr::filter(startsWith(REG_NAME_CLEAN, current_clean_no_prefix)) %>%
-      dplyr::arrange(nchar(REG_NAME_CLEAN))
-
-    if (nrow(prefix_matches) > 0) {
-      results[i] <- prefix_matches$REG_NAME_OFFICIAL[1]
-      next
-    }
-
-    # Try reverse prefix matching (alias is part of input)
-    reverse_prefix_matches <- alias_lookup %>%
-      dplyr::filter(startsWith(current_clean_no_prefix, REG_NAME_CLEAN)) %>%
-      dplyr::arrange(dplyr::desc(nchar(REG_NAME_CLEAN)))
-
-    if (nrow(reverse_prefix_matches) > 0) {
-      results[i] <- reverse_prefix_matches$REG_NAME_OFFICIAL[1]
-      next
-    }
-
-    # Fuzzy matching as last resort
-    alias_with_distances <- alias_lookup %>%
-      dplyr::filter(REG_NAME_CLEAN != "_na_") %>%
-      dplyr::mutate(
-        distance = stringdist::stringdist(current_clean_no_prefix, REG_NAME_CLEAN, method = "jw")
-      ) %>%
-      dplyr::arrange(distance, nchar(REG_NAME_CLEAN))
-
-    if (nrow(alias_with_distances) > 0) {
-      best_match <- alias_with_distances[1, ]
-
-      # Apply tolerance check BEFORE assigning result
-      # Note: Jaro-Winkler distance is already normalized (0-1), lower is better
-      if (best_match$distance <= .tol) {
-        results[i] <- best_match$REG_NAME_OFFICIAL
-      } else {
-        # Handle error cases - name doesn't match within tolerance
-        if (.on_error == "na") {
-          results[i] <- NA_character_
-        } else if (.on_error == "omit") {
-          results[i] <- current_name
-        } else if (.on_error == "fail") {
-          cli::cli_abort(
-            c(
-              "x" = "Region name '{current_name}' could not be matched with tolerance {.tol}",
-              "i" = "Best match was '{best_match$REG_NAME_OFFICIAL}' with distance {round(best_match$distance, 3)}",
-              "i" = "Consider increasing .tol or using .on_error = 'na' or 'omit'"
-            )
-          )
-        }
-      }
-    } else {
-      # No matches at all - this should rarely happen
-      if (.on_error == "na") {
-        results[i] <- NA_character_
-      } else if (.on_error == "omit") {
-        results[i] <- current_name
-      } else if (.on_error == "fail") {
-        cli::cli_abort("Region name '{current_name}' could not be matched to any known region")
-      }
-    }
-  }
-
-  return(results)
+  .do_generic_names_cleaning(
+    names = names, alias_data = alias_data,
+    id_col = "REG_ID", name_col = "REG_NAME",
+    level_label = "Region",
+    prefix_regex = "^(region|reg)\\.?\\s+",
+    code_regex = "^\\d{2}$",
+    .tol = .tol, .on_error = .on_error
+  )
 }
 
 #' Clean and standardize Dominican Republic region names
@@ -212,7 +86,10 @@ gd_regions <- function(id = "RD_RUP", sf = TRUE, verbose = FALSE) {
 #' @examples
 #' \dontrun{
 #' # Basic usage with region names
-#' cleaned_reg_names <- gd_clean_region_name(c("norte", "yuma", "valle"))
+#' gd_clean_region_name(c("norte", "yuma", "valle"))
+#'
+#' # With code (2 digits)
+#' gd_clean_region_name("01")
 #'
 #' # With prefix variants
 #' gd_clean_region_name(c("Región Cibao Norte", "Región Valdesia"))
@@ -221,9 +98,9 @@ gd_regions <- function(id = "RD_RUP", sf = TRUE, verbose = FALSE) {
 #' gd_clean_region_name("cibaooo", .tol = 0.8, .on_error = "na")
 #' }
 gd_clean_region_name <- function(reg, .tol = 0.25, .on_error = "fail") {
-  # Get alias data
+  .validate_clean_params(.tol, .on_error)
+
   alias_data <- .get_regiones_alias()
-  
-  # Use the robust cleaning function
+
   .do_region_names_cleaning(reg, alias_data, .tol, .on_error)
 }

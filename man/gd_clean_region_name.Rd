@@ -28,7 +28,10 @@ Regiones Únicas de Planificación according to Law 345-22.
 \examples{
 \dontrun{
 # Basic usage with region names
-cleaned_reg_names <- gd_clean_region_name(c("norte", "yuma", "valle"))
+gd_clean_region_name(c("norte", "yuma", "valle"))
+
+# With code (2 digits)
+gd_clean_region_name("01")
 
 # With prefix variants
 gd_clean_region_name(c("Región Cibao Norte", "Región Valdesia"))

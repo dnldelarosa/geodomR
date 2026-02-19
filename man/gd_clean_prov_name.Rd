@@ -7,28 +7,38 @@
 gd_clean_prov_name(prov, .tol = 0.25, .on_error = "fail")
 }
 \arguments{
-\item{prov}{Vector de caracteres con nombres de provincias a limpiar}
+\item{prov}{Vector de caracteres con nombres (o códigos de 2 dígitos) de
+provincias a limpiar.}
 
 \item{.tol}{Nivel de tolerancia numérico para similitud de cadenas. Por defecto 0.25.}
 
 \item{.on_error}{Método de manejo de errores. Por defecto "fail".
-Puede ser "fail" para detener la ejecución, "omit" para ignorar nombres
-no emparejados, o "na" para devolver NA en nombres no emparejados.}
+Puede ser "fail", "omit" o "na".}
 }
 \value{
-Vector de caracteres con nombres de provincias limpiados
+Vector de caracteres con nombres de provincias limpiados.
 }
 \description{
 Esta función limpia y estandariza los nombres de las provincias de la
 República Dominicana, utilizando un dataset de alias para mayor robustez
 en el emparejamiento de nombres.
 }
+\details{
+Soporta tres modos de entrada:
+\itemize{
+\item \strong{Nombre}: se busca en el dataset de aliases (exacto, prefijo, fuzzy).
+\item \strong{Código}: un código de 2 dígitos (PROV_ID) se valida directamente.
+}
+}
 \examples{
 \dontrun{
   # Uso básico
-  provincias_limpias <- gd_clean_prov_name(c("azua", "barahona", "stgo"))
-  
+  gd_clean_prov_name(c("azua", "barahona", "stgo"))
+
+  # Con código directo (2 dígitos)
+  gd_clean_prov_name("02")
+
   # Con mayor tolerancia
-  provincias_limpias <- gd_clean_prov_name(c("azua", "barahona"), .tol = 0.5)
+  gd_clean_prov_name(c("azua", "barahona"), .tol = 0.5)
 }
 }

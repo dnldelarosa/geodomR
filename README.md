@@ -18,7 +18,7 @@ Puedes instalar geodom desde GitHub:
 
 ``` r
 # install.packages("pak")
-pak::pak("GeoDOMProject/geodomR")
+pak::pak("dnldelarosa/geodomR")
 ```
 
 ## Uso Rápido
@@ -63,7 +63,6 @@ gd_map(datos)
 
 ``` r
 library(ggplot2)
-#> Warning: package 'ggplot2' was built under R version 4.4.3
 
 gd_map(datos, fill = "poblacion", color = "white", linewidth = 0.3) +
     scale_fill_viridis_c(option = "plasma", name = "Población") +
@@ -78,22 +77,28 @@ gd_map(datos, fill = "poblacion", color = "white", linewidth = 0.3) +
 # Acepta variaciones como minúsculas, sin tildes, abreviaciones
 gd_clean_prov_name(c("santo domingo", "Elias Pina", "la vega"))
 #> [1] "Santo Domingo" "Elías Piña"    "La Vega"
-#> [1] "Santo Domingo" "Elías Piña" "La Vega"
 ```
 
 ## Funciones Principales
 
-| Función                | Descripción                                |
-|------------------------|--------------------------------------------|
-| `gd_provinces()`       | Límites de las 32 provincias               |
-| `gd_regions()`         | Regiones de planificación                  |
-| `gd_municipalities()`  | Los 158 municipios                         |
-| `gd_dm()`              | Distritos municipales                      |
-| `gd_sections()`        | Secciones censales                         |
-| `gd_bparajes()`        | Barrios y parajes                          |
-| `gd_map()`             | Crear mapa coroplético con autodetección   |
-| `gd_detect_level()`    | Detectar nivel geográfico de datos         |
-| `gd_clean_prov_name()` | Limpiar/estandarizar nombres de provincias |
+| Función                        | Descripción                              |
+|--------------------------------|------------------------------------------|
+| `gd_provinces()`               | Límites de las 32 provincias             |
+| `gd_regions()`                 | Regiones de planificación                |
+| `gd_municipalities()`          | Los 158 municipios                       |
+| `gd_dm()`                      | Distritos municipales                    |
+| `gd_sections()`                | Secciones censales                       |
+| `gd_bparajes()`                | Barrios y parajes                        |
+| `gd_zones()`                   | Zonas de residencia (urbana/rural)       |
+| `gd_map()`                     | Crear mapa coroplético con autodetección |
+| `gd_detect_level()`            | Detectar nivel geográfico de datos       |
+| `gd_clean_prov_name()`         | Limpiar nombres de provincias            |
+| `gd_clean_region_name()`       | Limpiar nombres de regiones              |
+| `gd_clean_municipality_name()` | Limpiar nombres de municipios            |
+| `gd_clean_dm_name()`           | Limpiar nombres de distritos municipales |
+| `gd_clean_section_name()`      | Limpiar nombres de secciones             |
+| `gd_clean_bparaje_name()`      | Limpiar nombres de barrios/parajes       |
+| `gd_clean_zone_name()`         | Limpiar nombres de zonas                 |
 
 ## Documentación
 

@@ -205,12 +205,59 @@ gd_map_data <- function(data, fill = NULL, .level = NULL, .name = NULL, .key = N
                 warning("No se pudieron limpiar los nombres de zonas: ", e$message)
             }
         )
+    } else if (level == "municipalities" && info[["key"]] == "TOPONIMIA") {
+        tryCatch(
+            {
+                data_clean[[name_col]] <- gd_clean_municipality_name(
+                    data[[name_col]],
+                    .tol = 0.5,
+                    .on_error = "na"
+                )
+            },
+            error = function(e) {
+                warning("No se pudieron limpiar los nombres de municipios: ", e$message)
+            }
+        )
+    } else if (level == "dm" && info[["key"]] == "TOPONIMIA") {
+        tryCatch(
+            {
+                data_clean[[name_col]] <- gd_clean_dm_name(
+                    data[[name_col]],
+                    .tol = 0.5,
+                    .on_error = "na"
+                )
+            },
+            error = function(e) {
+                warning("No se pudieron limpiar los nombres de distritos municipales: ", e$message)
+            }
+        )
+    } else if (level == "sections" && info[["key"]] == "TOPONIMIA") {
+        tryCatch(
+            {
+                data_clean[[name_col]] <- gd_clean_section_name(
+                    data[[name_col]],
+                    .tol = 0.5,
+                    .on_error = "na"
+                )
+            },
+            error = function(e) {
+                warning("No se pudieron limpiar los nombres de secciones: ", e$message)
+            }
+        )
+    } else if (level == "bparajes" && info[["key"]] == "TOPONIMIA") {
+        tryCatch(
+            {
+                data_clean[[name_col]] <- gd_clean_bparaje_name(
+                    data[[name_col]],
+                    .tol = 0.5,
+                    .on_error = "na"
+                )
+            },
+            error = function(e) {
+                warning("No se pudieron limpiar los nombres de barrios/parajes: ", e$message)
+            }
+        )
     }
-    # TODO: Agregar limpieza para otros niveles cuando se implementen:
-    # - municipalities: gd_clean_municipality_name()
-    # - dm: gd_clean_dm_name()
-    # - sections: gd_clean_section_name()
-    # - bparajes: gd_clean_bparaje_name()
 
     # Aplicar el mismo cleaner a ambos lados para garantizar coincidencia
     # Las geometrías tienen TOPONIMIA en mayúsculas, los datos del usuario pueden variar
@@ -246,6 +293,58 @@ gd_map_data <- function(data, fill = NULL, .level = NULL, .name = NULL, .key = N
             tryCatch(
                 {
                     map_geom[[key_col]] <- gd_clean_zone_name(
+                        map_geom[[key_col]],
+                        .tol = 0.5,
+                        .on_error = "omit"
+                    )
+                },
+                error = function(e) {
+                    warning("No se pudieron limpiar los nombres en geometrías: ", e$message)
+                }
+            )
+        } else if (level == "municipalities") {
+            tryCatch(
+                {
+                    map_geom[[key_col]] <- gd_clean_municipality_name(
+                        map_geom[[key_col]],
+                        .tol = 0.5,
+                        .on_error = "omit"
+                    )
+                },
+                error = function(e) {
+                    warning("No se pudieron limpiar los nombres en geometrías: ", e$message)
+                }
+            )
+        } else if (level == "dm") {
+            tryCatch(
+                {
+                    map_geom[[key_col]] <- gd_clean_dm_name(
+                        map_geom[[key_col]],
+                        .tol = 0.5,
+                        .on_error = "omit"
+                    )
+                },
+                error = function(e) {
+                    warning("No se pudieron limpiar los nombres en geometrías: ", e$message)
+                }
+            )
+        } else if (level == "sections") {
+            tryCatch(
+                {
+                    map_geom[[key_col]] <- gd_clean_section_name(
+                        map_geom[[key_col]],
+                        .tol = 0.5,
+                        .on_error = "omit"
+                    )
+                },
+                error = function(e) {
+                    warning("No se pudieron limpiar los nombres en geometrías: ", e$message)
+                }
+            )
+        } else if (level == "bparajes") {
+            tryCatch(
+                {
+                    map_geom[[key_col]] <- gd_clean_bparaje_name(
                         map_geom[[key_col]],
                         .tol = 0.5,
                         .on_error = "omit"
@@ -336,6 +435,12 @@ gd_geom_sf <- function(data = NULL, ...) {
         # Preparar datos
         map_data <- gd_map_data(data, fill = fill, .level = .level, .name = .name, .key = .key)
         .args$data <- map_data
+
+        # ggplot2 >=4.0 requiere aes(geometry=) explícito en geom_sf
+        geo_col <- attr(map_data, "sf_column") %||% "geometry"
+        if (is.null(.args$mapping)) {
+            .args$mapping <- ggplot2::aes(geometry = .data[[geo_col]])
+        }
     }
 
     do.call(ggplot2::geom_sf, .args)
@@ -382,9 +487,17 @@ gd_map <- function(data, fill = NULL, .level = NULL, .name = NULL, .key = NULL, 
 
     # Crear el mapa con una capa base para mostrar todos los polígonos
     # Esto asegura que los polígonos sin datos (NA) sean visibles
+    # Nota: ggplot2 >=4.0 requiere aes(geometry=) explícito en geom_sf
+    geo_col <- attr(map_data, "sf_column") %||% "geometry"
     p <- ggplot2::ggplot(data = map_data) +
-        ggplot2::geom_sf(fill = "gray90", color = "gray70", linewidth = 0.1) +
-        ggplot2::geom_sf(ggplot2::aes(fill = .data[[fill_var]]), ...) +
+        ggplot2::geom_sf(
+            mapping = ggplot2::aes(geometry = .data[[geo_col]]),
+            fill = "gray90", color = "gray70", linewidth = 0.1
+        ) +
+        ggplot2::geom_sf(
+            mapping = ggplot2::aes(geometry = .data[[geo_col]], fill = .data[[fill_var]]),
+            ...
+        ) +
         ggplot2::theme_void()
 
     return(p)

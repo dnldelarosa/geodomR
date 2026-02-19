@@ -1,6 +1,6 @@
 Package: geodom
 Title: Acceso a un Marco de Datos Geoespaciales Estandarizados para la Republica Dominicana
-Version: 0.2.1
+Version: 0.3.0
 Authors@R: 
     c(person(given = "Daniel E.",
            family = "de la Rosa",

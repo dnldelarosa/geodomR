@@ -176,14 +176,92 @@ gd_detect_level <- function(data, .level = NULL, .name = NULL, .key = NULL) {
                   used_cleaning_function <- FALSE
                 })
               })
+            } else if (.opt_name == "municipalities" && key_name == "TOPONIMIA") {
+              tryCatch({
+                cleaned_values <- gd_clean_municipality_name(unique_values, .tol = 0.25, .on_error = "fail")
+                matches <- length(unique_values)
+                used_cleaning_function <- TRUE
+              }, error = function(e) {
+                tryCatch({
+                  cleaned_values <- gd_clean_municipality_name(unique_values, .tol = 0.5, .on_error = "na")
+                  cleaned_values <- cleaned_values[!is.na(cleaned_values)]
+                  if (length(cleaned_values) >= length(unique_values) * 0.8) {
+                    matches <- length(cleaned_values)
+                    used_cleaning_function <- TRUE
+                  } else {
+                    matches <- sum(unique_values %in% reference_values)
+                    used_cleaning_function <- FALSE
+                  }
+                }, error = function(e2) {
+                  matches <- sum(unique_values %in% reference_values)
+                  used_cleaning_function <- FALSE
+                })
+              })
+            } else if (.opt_name == "dm" && key_name == "TOPONIMIA") {
+              tryCatch({
+                cleaned_values <- gd_clean_dm_name(unique_values, .tol = 0.25, .on_error = "fail")
+                matches <- length(unique_values)
+                used_cleaning_function <- TRUE
+              }, error = function(e) {
+                tryCatch({
+                  cleaned_values <- gd_clean_dm_name(unique_values, .tol = 0.5, .on_error = "na")
+                  cleaned_values <- cleaned_values[!is.na(cleaned_values)]
+                  if (length(cleaned_values) >= length(unique_values) * 0.8) {
+                    matches <- length(cleaned_values)
+                    used_cleaning_function <- TRUE
+                  } else {
+                    matches <- sum(unique_values %in% reference_values)
+                    used_cleaning_function <- FALSE
+                  }
+                }, error = function(e2) {
+                  matches <- sum(unique_values %in% reference_values)
+                  used_cleaning_function <- FALSE
+                })
+              })
+            } else if (.opt_name == "sections" && key_name == "TOPONIMIA") {
+              tryCatch({
+                cleaned_values <- gd_clean_section_name(unique_values, .tol = 0.25, .on_error = "fail")
+                matches <- length(unique_values)
+                used_cleaning_function <- TRUE
+              }, error = function(e) {
+                tryCatch({
+                  cleaned_values <- gd_clean_section_name(unique_values, .tol = 0.5, .on_error = "na")
+                  cleaned_values <- cleaned_values[!is.na(cleaned_values)]
+                  if (length(cleaned_values) >= length(unique_values) * 0.8) {
+                    matches <- length(cleaned_values)
+                    used_cleaning_function <- TRUE
+                  } else {
+                    matches <- sum(unique_values %in% reference_values)
+                    used_cleaning_function <- FALSE
+                  }
+                }, error = function(e2) {
+                  matches <- sum(unique_values %in% reference_values)
+                  used_cleaning_function <- FALSE
+                })
+              })
+            } else if (.opt_name == "bparajes" && key_name == "TOPONIMIA") {
+              tryCatch({
+                cleaned_values <- gd_clean_bparaje_name(unique_values, .tol = 0.25, .on_error = "fail")
+                matches <- length(unique_values)
+                used_cleaning_function <- TRUE
+              }, error = function(e) {
+                tryCatch({
+                  cleaned_values <- gd_clean_bparaje_name(unique_values, .tol = 0.5, .on_error = "na")
+                  cleaned_values <- cleaned_values[!is.na(cleaned_values)]
+                  if (length(cleaned_values) >= length(unique_values) * 0.8) {
+                    matches <- length(cleaned_values)
+                    used_cleaning_function <- TRUE
+                  } else {
+                    matches <- sum(unique_values %in% reference_values)
+                    used_cleaning_function <- FALSE
+                  }
+                }, error = function(e2) {
+                  matches <- sum(unique_values %in% reference_values)
+                  used_cleaning_function <- FALSE
+                })
+              })
             } else {
               # Para otros niveles, usar comparación directa
-              # TODO: Implementar funciones de limpieza para otros niveles administrativos:
-              # TODO: - gd_clean_municipality_name() para municipalities
-              # TODO: - gd_clean_dm_name() para dm (distritos municipales)  
-              # TODO: - gd_clean_section_name() para sections
-              # TODO: - gd_clean_bparaje_name() para bparajes
-              # TODO: Esto mejorará significativamente la detección automática y reducirá falsos negativos
               matches <- sum(unique_values %in% reference_values)
               used_cleaning_function <- FALSE
             }
@@ -261,37 +339,16 @@ gd_detect_level <- function(data, .level = NULL, .name = NULL, .key = NULL) {
   tryCatch({
     .options <- list()
     
-    # Secciones
-    tryCatch({
-      sections_data <- gd_sections(sf = FALSE)
-      if (!is.null(sections_data)) {
-        .options[["sections"]] <- sections_data
-      }
-    }, error = function(e) {
-      message("No se pudieron cargar los datos de secciones: ", e$message)
-    })
+    # IMPORTANTE: El orden de detección determina la prioridad cuando un nombre
+    # coincide en múltiples niveles (ej: "Monte Plata" es provincia Y alias de
+    # región Higuamo; "Santiago" existe en provincias, municipios, DMs y secciones).
+    #
+    # Orden: provincias primero (nivel más usado), luego zonas/regiones,
+    # después municipios/DMs, y finalmente secciones/bparajes (más finos).
+    # Un guarda en el bucle de detección (length(unique_values) < 3) ya
+    # excluye municipios/DM/secciones/bparajes cuando hay pocos valores.
     
-    # Distritos Municipales
-    tryCatch({
-      dm_data <- gd_dm(sf = FALSE)
-      if (!is.null(dm_data)) {
-        .options[["dm"]] <- dm_data
-      }
-    }, error = function(e) {
-      message("No se pudieron cargar los datos de distritos municipales: ", e$message)
-    })
-    
-    # Municipios
-    tryCatch({
-      municipalities_data <- gd_municipalities(sf = FALSE)
-      if (!is.null(municipalities_data)) {
-        .options[["municipalities"]] <- municipalities_data
-      }
-    }, error = function(e) {
-      message("No se pudieron cargar los datos de municipios: ", e$message)
-    })
-    
-    # Provincias
+    # Provincias (32 provincias) — nivel más usado, prioridad máxima
     tryCatch({
       provinces_data <- gd_provinces(sf = FALSE)
       if (!is.null(provinces_data)) {
@@ -301,17 +358,7 @@ gd_detect_level <- function(data, .level = NULL, .name = NULL, .key = NULL) {
       message("No se pudieron cargar los datos de provincias: ", e$message)
     })
     
-    # Regiones
-    tryCatch({
-      regions_data <- gd_regions(sf = FALSE)
-      if (!is.null(regions_data)) {
-        .options[["regions"]] <- regions_data
-      }
-    }, error = function(e) {
-      message("No se pudieron cargar los datos de regiones: ", e$message)
-    })
-    
-    # Zonas de Residencia
+    # Zonas de Residencia (2 zonas)
     tryCatch({
       zones_data <- gd_zones(sf = FALSE)
       if (!is.null(zones_data)) {
@@ -321,7 +368,47 @@ gd_detect_level <- function(data, .level = NULL, .name = NULL, .key = NULL) {
       message("No se pudieron cargar los datos de zonas: ", e$message)
     })
     
-    # Barrios/Parajes (si existe la función)
+    # Regiones (10 regiones)
+    tryCatch({
+      regions_data <- gd_regions(sf = FALSE)
+      if (!is.null(regions_data)) {
+        .options[["regions"]] <- regions_data
+      }
+    }, error = function(e) {
+      message("No se pudieron cargar los datos de regiones: ", e$message)
+    })
+    
+    # Municipios (158 municipios)
+    tryCatch({
+      municipalities_data <- gd_municipalities(sf = FALSE)
+      if (!is.null(municipalities_data)) {
+        .options[["municipalities"]] <- municipalities_data
+      }
+    }, error = function(e) {
+      message("No se pudieron cargar los datos de municipios: ", e$message)
+    })
+    
+    # Distritos Municipales (394 DMs)
+    tryCatch({
+      dm_data <- gd_dm(sf = FALSE)
+      if (!is.null(dm_data)) {
+        .options[["dm"]] <- dm_data
+      }
+    }, error = function(e) {
+      message("No se pudieron cargar los datos de distritos municipales: ", e$message)
+    })
+    
+    # Secciones (1,599 secciones)
+    tryCatch({
+      sections_data <- gd_sections(sf = FALSE)
+      if (!is.null(sections_data)) {
+        .options[["sections"]] <- sections_data
+      }
+    }, error = function(e) {
+      message("No se pudieron cargar los datos de secciones: ", e$message)
+    })
+    
+    # Barrios/Parajes (12,814 BPs)
     tryCatch({
       if (exists("gd_bparajes")) {
         bparajes_data <- gd_bparajes(sf = FALSE)

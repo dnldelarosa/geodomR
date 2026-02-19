@@ -4,16 +4,17 @@ test_that("gd_clean_municipality_name works with basic municipality names", {
   # Casos básicos que deben encontrar coincidencias exactas
   expect_equal(gd_clean_municipality_name("azua"), "Azua")
   expect_equal(gd_clean_municipality_name("BARAHONA"), "Barahona")
-  expect_equal(gd_clean_municipality_name("distrito nacional"), "Distrito Nacional")
+  # "distrito nacional" es alias de MUN_ID 0101: oficial = "Santo Domingo de Guzmán" (orden curado del JSON)
+  expect_equal(gd_clean_municipality_name("distrito nacional"), "Santo Domingo de Guzm\u00e1n")
 })
 
 test_that("gd_clean_municipality_name handles variations correctly", {
-  # Casos con variaciones comunes que deben mapearse correctamente
-  # Nota: Los datos muestran que "santo domingo de guzman" mapea a "Distrito Nacional"
-  expect_equal(gd_clean_municipality_name("santo domingo de guzman"), "Distrito Nacional")
-  # "azua de compostela" mapea a "Azua" (nombre más corto/oficial)
+  # "santo domingo de guzman" mapea a "Santo Domingo de Guzmán" (nombre oficial)
+  expect_equal(gd_clean_municipality_name("santo domingo de guzman"), "Santo Domingo de Guzm\u00e1n")
+  # "azua de compostela" mapea a "Azua"
   expect_equal(gd_clean_municipality_name("azua de compostela"), "Azua")
-  expect_equal(gd_clean_municipality_name("las yayas"), "Las Yayas")
+  # "las yayas" mapea a "Las Yayas de Viajama" (nombre oficial en JSON)
+  expect_equal(gd_clean_municipality_name("las yayas"), "Las Yayas de Viajama")
 })
 
 test_that("gd_clean_municipality_name enforces strict tolerance by default", {
@@ -62,9 +63,9 @@ test_that("gd_clean_municipality_name respects tolerance parameter", {
 
 test_that("gd_clean_municipality_name handles empty input correctly", {
   expect_equal(gd_clean_municipality_name(character(0)), character(0))
-  # El string vacío actualmente mapea a "Mao" - esto puede ser un comportamiento esperado o un bug
-  # Por ahora acepto el comportamiento actual
-  expect_equal(gd_clean_municipality_name(""), "Mao")
+  # El string vacío ahora se trata como error (antes mapeaba a "Mao" por bug en startsWith)
+  expect_error(gd_clean_municipality_name(""), "empty")
+  expect_true(is.na(gd_clean_municipality_name("", .on_error = "na")))
 })
 
 test_that("gd_clean_municipality_name handles common municipality variations", {

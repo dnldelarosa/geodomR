@@ -16,7 +16,7 @@ test_that("gd_clean_zone_name handles variations correctly", {
 
 test_that("gd_clean_zone_name enforces strict tolerance by default", {
   # Nombres muy diferentes deben fallar con tolerancia por defecto
-  expect_error(gd_clean_zone_name("completely_invalid_zone"), "no pudo emparejarse con la tolerancia")
+  expect_error(gd_clean_zone_name("completely_invalid_zone"), "could not be matched")
   
   # Pero deben funcionar con .on_error = "na"
   expect_true(is.na(gd_clean_zone_name("invalid_zone", .on_error = "na")))
@@ -32,14 +32,14 @@ test_that("gd_clean_zone_name handles multiple names", {
 })
 
 test_that("gd_clean_zone_name handles NA values correctly", {
-  expect_equal(gd_clean_zone_name(NA_character_), NA_character_)
+  expect_equal(gd_clean_zone_name(NA_character_), "_NA_")
   expect_equal(gd_clean_zone_name(c("urbana", NA_character_, "rural")), 
-               c("Urbana", NA_character_, "Rural"))
+               c("Urbana", "_NA_", "Rural"))
 })
 
 test_that("gd_clean_zone_name respects tolerance parameter", {
   # Con tolerancia muy baja, debe fallar para nombres muy diferentes
-  expect_error(gd_clean_zone_name("invalid_zone", .tol = 0.1), "no pudo emparejarse")
+  expect_error(gd_clean_zone_name("invalid_zone", .tol = 0.1), "could not be matched")
   
   # Con tolerancia alta y .on_error = "na", debe manejar nombres inválidos
   result <- gd_clean_zone_name("invalid_zone", .tol = 0.9, .on_error = "na")

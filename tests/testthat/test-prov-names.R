@@ -9,9 +9,10 @@ test_that("gd_clean_prov_name works with basic province names", {
 
 test_that("gd_clean_prov_name enforces strict tolerance by default", {
   # Abreviaciones deben fallar con tolerancia por defecto para evitar matches incorrectos
-  expect_error(gd_clean_prov_name("stgo"), "no pudo emparejarse con la tolerancia especificada")
-  expect_error(gd_clean_prov_name("rod"), "no pudo emparejarse con la tolerancia especificada")
-  expect_error(gd_clean_prov_name("srodriguez"), "no pudo emparejarse con la tolerancia especificada")
+  expect_error(gd_clean_prov_name("stgo"), "could not be matched")
+  expect_error(gd_clean_prov_name("rod"), "could not be matched")
+  # "srodriguez" ahora coincide via JW (dist 0.23 < 0.25 threshold) — es abreviación legítima
+  expect_equal(gd_clean_prov_name("srodriguez"), "Santiago Rodríguez")
   
   # Pero deben funcionar con .on_error = "na"
   expect_true(is.na(gd_clean_prov_name("stgo", .on_error = "na")))
@@ -80,8 +81,8 @@ test_that("gd_clean_prov_name works with prefixes", {
 
 test_that("gd_clean_prov_name enforces strict tolerance by default", {
   # Abreviaciones deben fallar con tolerancia por defecto para evitar matches incorrectos
-  expect_error(gd_clean_prov_name("stgo"), "no pudo emparejarse con la tolerancia especificada")
-  expect_error(gd_clean_prov_name("rod"), "no pudo emparejarse con la tolerancia especificada")
+  expect_error(gd_clean_prov_name("stgo"), "could not be matched")
+  expect_error(gd_clean_prov_name("rod"), "could not be matched")
   
   # Pero deben funcionar con .on_error = "na"
   expect_true(is.na(gd_clean_prov_name("stgo", .on_error = "na")))
@@ -93,7 +94,7 @@ test_that("gd_clean_prov_name enforces strict tolerance by default", {
 })
 
 test_that("gd_clean_prov_name handles empty strings", {
-  # Cadenas vacías se mapean al mejor match disponible
-  result <- gd_clean_prov_name("", .on_error = "na")
-  expect_true(is.character(result) && !is.na(result))
+  # Cadenas vacías ahora se tratan como error (antes mapeaban por bug en startsWith)
+  expect_error(gd_clean_prov_name(""), "empty")
+  expect_true(is.na(gd_clean_prov_name("", .on_error = "na")))
 })

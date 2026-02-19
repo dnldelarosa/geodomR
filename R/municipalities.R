@@ -54,129 +54,19 @@ gd_municipalities <- function(id = "RD_MUN158", sf = TRUE) {
 }
 
 # Helper function for robust municipality name cleaning
-.do_municipality_names_cleaning <- function(names, alias_data, .tol = 0.25, .on_error = "fail") {
-  # Handle special cases
-  names <- ifelse(is.na(names), "_NA_", as.character(names))
-
-  # Clean input names
-  names_clean <- .text_cleaning(names)
-
-  # Create a unique lookup table by getting the official name for each municipality
-  # Official names should be the first occurrence for each MUN_ID
-  official_names <- alias_data %>%
-    dplyr::arrange(MUN_ID, MUN_NAME) %>%
-    dplyr::group_by(MUN_ID) %>%
-    dplyr::slice(1) %>%
-    dplyr::ungroup() %>%
-    dplyr::select(MUN_ID, MUN_NAME_OFFICIAL = MUN_NAME)
-
-  # Create lookup table with all aliases pointing to official names
-  alias_lookup <- alias_data %>%
-    dplyr::left_join(official_names, by = "MUN_ID") %>%
-    dplyr::mutate(
-      MUN_NAME_CLEAN = .text_cleaning(MUN_NAME)
-    ) %>%
-    dplyr::select(MUN_NAME_CLEAN, MUN_NAME_OFFICIAL) %>%
-    dplyr::distinct()
-
-  # Process each input name individually
-  results <- character(length(names))
-
-  for (i in seq_along(names)) {
-    current_name <- names[i]
-    current_clean <- names_clean[i]
-
-    # Handle NA case
-    if (current_clean == "_na_") {
-      results[i] <- "_NA_"
-      next
-    }
-
-    # Try exact match first
-    exact_match <- alias_lookup %>%
-      dplyr::filter(MUN_NAME_CLEAN == current_clean)
-
-    if (nrow(exact_match) > 0) {
-      results[i] <- exact_match$MUN_NAME_OFFICIAL[1]
-      next
-    }
-
-    # Remove common prefixes for better matching
-    current_clean_no_prefix <- gsub("^(municipio|mun)\\s+", "", current_clean, ignore.case = TRUE)
-    if (current_clean_no_prefix != current_clean) {
-      exact_match_no_prefix <- alias_lookup %>%
-        dplyr::filter(MUN_NAME_CLEAN == current_clean_no_prefix)
-
-      if (nrow(exact_match_no_prefix) > 0) {
-        results[i] <- exact_match_no_prefix$MUN_NAME_OFFICIAL[1]
-        next
-      }
-    }
-
-    # Try partial/prefix matching (input is part of alias)
-    prefix_matches <- alias_lookup %>%
-      dplyr::filter(startsWith(MUN_NAME_CLEAN, current_clean_no_prefix)) %>%
-      dplyr::arrange(nchar(MUN_NAME_CLEAN))
-
-    if (nrow(prefix_matches) > 0) {
-      results[i] <- prefix_matches$MUN_NAME_OFFICIAL[1]
-      next
-    }
-
-    # Try reverse prefix matching (alias is part of input)
-    reverse_prefix_matches <- alias_lookup %>%
-      dplyr::filter(startsWith(current_clean_no_prefix, MUN_NAME_CLEAN)) %>%
-      dplyr::arrange(dplyr::desc(nchar(MUN_NAME_CLEAN)))
-
-    if (nrow(reverse_prefix_matches) > 0) {
-      results[i] <- reverse_prefix_matches$MUN_NAME_OFFICIAL[1]
-      next
-    }
-
-    # Fuzzy matching as last resort
-    alias_with_distances <- alias_lookup %>%
-      dplyr::filter(MUN_NAME_CLEAN != "_na_") %>%
-      dplyr::mutate(
-        distance = stringdist::stringdist(current_clean_no_prefix, MUN_NAME_CLEAN, method = "jw")
-      ) %>%
-      dplyr::arrange(distance, nchar(MUN_NAME_CLEAN))
-
-    if (nrow(alias_with_distances) > 0) {
-      best_match <- alias_with_distances[1, ]
-
-      # Apply tolerance check BEFORE assigning result
-      # Note: Jaro-Winkler distance is already normalized (0-1), lower is better
-      if (best_match$distance <= .tol) {
-        results[i] <- best_match$MUN_NAME_OFFICIAL
-      } else {
-        # Handle error cases - name doesn't match within tolerance
-        if (.on_error == "na") {
-          results[i] <- NA_character_
-        } else if (.on_error == "omit") {
-          results[i] <- current_name
-        } else if (.on_error == "fail") {
-          cli::cli_abort(
-            c(
-              "x" = paste0("Municipality name '", current_name, "' could not be matched with tolerance ", .tol),
-              "i" = paste0("Best match was '", best_match$MUN_NAME_OFFICIAL, "' with distance ", round(best_match$distance, 3)),
-              "i" = "Consider increasing .tol or using .on_error = 'na' or 'omit'"
-            )
-          )
-        }
-      }
-    } else {
-      # No matches at all - this should rarely happen
-      if (.on_error == "na") {
-        results[i] <- NA_character_
-      } else if (.on_error == "omit") {
-        results[i] <- current_name
-      } else if (.on_error == "fail") {
-        cli::cli_abort("Municipality name '{current_name}' could not be matched to any known municipality")
-      }
-    }
-  }
-
-  return(results)
+.do_municipality_names_cleaning <- function(names, alias_data, .tol = 0.25, .on_error = "fail",
+                                             parent_filter_ids = NULL, parent_prefix_len = NULL) {
+  .do_generic_names_cleaning(
+    names = names, alias_data = alias_data,
+    id_col = "MUN_ID", name_col = "MUN_NAME",
+    level_label = "Municipality",
+    prefix_regex = "^(municipio|mun)\\.?\\s+",
+    code_regex = "^\\d{4}$",
+    parent_filter_ids = parent_filter_ids,
+    parent_prefix_len = parent_prefix_len,
+    parent_hint = "Use .province to disambiguate",
+    .tol = .tol, .on_error = .on_error
+  )
 }
 
 #' Limpia y estandariza los nombres de municipios de la República Dominicana
@@ -185,13 +75,17 @@ gd_municipalities <- function(id = "RD_MUN158", sf = TRUE) {
 #' con tolerancia para la similitud de cadenas y opciones para el manejo de errores. Utiliza
 #' el sistema oficial de códigos municipales de la República Dominicana.
 #'
-#' @param mun Vector de caracteres con los nombres de municipios a limpiar.
+#' Soporta tres modos de entrada:
+#' - **Nombre**: se busca en el dataset de aliases (exacto, prefijo, fuzzy).
+#' - **Código**: un código de 4 dígitos (MUN_ID) se valida directamente.
+#' - **Desambiguación**: usar `.province` para filtrar por provincia padre.
+#'
+#' @param mun Vector de caracteres con los nombres (o códigos de 4 dígitos) de
+#'   municipios a limpiar.
+#' @param .province Nombre de la provincia padre para desambiguar.
 #' @param .tol Nivel de tolerancia numérica para la similitud de cadenas. Por defecto es 0.25.
-#' Este parámetro controla cuán similares deben ser dos cadenas para considerarse una coincidencia.
-#' Un valor más bajo significa una coincidencia más estricta.
-#' @param .on_error Cadena de caracteres que especifica el método de manejo de errores. Por defecto es "fail".
-#' Puede ser uno de los siguientes: "fail" para detener la ejecución en caso de error,
-#' "omit" para ignorar los nombres no coincidentes, o "na" para devolver NA en los nombres no coincidentes.
+#' @param .on_error Cadena de caracteres que especifica el método de manejo de errores.
+#'   Puede ser "fail", "omit" o "na". Por defecto es "fail".
 #'
 #' @return Un vector de caracteres con los nombres de municipios limpiados.
 #' @export
@@ -199,27 +93,39 @@ gd_municipalities <- function(id = "RD_MUN158", sf = TRUE) {
 #' @examples
 #' \dontrun{
 #' # Uso básico con nombres de municipios
-#' nombres_mun_limpios <- gd_clean_municipality_name(c("santiago", "moca", "bonao"))
+#' gd_clean_municipality_name(c("santiago", "moca", "bonao"))
+#'
+#' # Con código directo (4 dígitos)
+#' gd_clean_municipality_name("0201")
 #'
 #' # Con variantes de prefijos
 #' gd_clean_municipality_name(c("Municipio de Santiago", "Mun. Moca"))
 #'
+#' # Con provincia padre
+#' gd_clean_municipality_name("Azua", .province = "Azua")
+#'
 #' # Con tolerancia y manejo de errores
 #' gd_clean_municipality_name("santiagooo", .tol = 0.8, .on_error = "na")
 #' }
-gd_clean_municipality_name <- function(mun, .tol = 0.25, .on_error = "fail") {
-  # Parameter validation
-  if (!is.numeric(.tol) || length(.tol) != 1 || .tol < 0 || .tol > 1) {
-    cli::cli_abort(".tol debe ser un número entre 0 y 1")
-  }
-  
-  if (!.on_error %in% c("fail", "na", "omit")) {
-    cli::cli_abort(".on_error debe ser uno de: 'fail', 'na', 'omit'")
-  }
-  
-  # Get alias data
+gd_clean_municipality_name <- function(mun, .province = NULL, .tol = 0.25, .on_error = "fail") {
+  .validate_clean_params(.tol, .on_error)
+
   alias_data <- .get_municipios_alias()
-  
-  # Use the robust cleaning function
-  .do_municipality_names_cleaning(mun, alias_data, .tol, .on_error)
+
+  # Resolver filtro de padre
+  parent_filter_ids <- NULL
+  parent_prefix_len <- NULL
+
+  if (!is.null(.province)) {
+    prov_alias <- .get_provincias_alias()
+    prov_ids <- .resolve_parent_ids(.province, prov_alias, "PROV_ID", "PROV_NAME")
+    if (!is.null(prov_ids)) {
+      parent_filter_ids <- prov_ids
+      parent_prefix_len <- 2L
+    }
+  }
+
+  .do_municipality_names_cleaning(mun, alias_data, .tol, .on_error,
+                                   parent_filter_ids = parent_filter_ids,
+                                   parent_prefix_len = parent_prefix_len)
 }

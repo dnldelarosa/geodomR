@@ -4,18 +4,23 @@
 \alias{gd_clean_municipality_name}
 \title{Limpia y estandariza los nombres de municipios de la República Dominicana}
 \usage{
-gd_clean_municipality_name(mun, .tol = 0.25, .on_error = "fail")
+gd_clean_municipality_name(
+  mun,
+  .province = NULL,
+  .tol = 0.25,
+  .on_error = "fail"
+)
 }
 \arguments{
-\item{mun}{Vector de caracteres con los nombres de municipios a limpiar.}
+\item{mun}{Vector de caracteres con los nombres (o códigos de 4 dígitos) de
+municipios a limpiar.}
 
-\item{.tol}{Nivel de tolerancia numérica para la similitud de cadenas. Por defecto es 0.25.
-Este parámetro controla cuán similares deben ser dos cadenas para considerarse una coincidencia.
-Un valor más bajo significa una coincidencia más estricta.}
+\item{.province}{Nombre de la provincia padre para desambiguar.}
 
-\item{.on_error}{Cadena de caracteres que especifica el método de manejo de errores. Por defecto es "fail".
-Puede ser uno de los siguientes: "fail" para detener la ejecución en caso de error,
-"omit" para ignorar los nombres no coincidentes, o "na" para devolver NA en los nombres no coincidentes.}
+\item{.tol}{Nivel de tolerancia numérica para la similitud de cadenas. Por defecto es 0.25.}
+
+\item{.on_error}{Cadena de caracteres que especifica el método de manejo de errores.
+Puede ser "fail", "omit" o "na". Por defecto es "fail".}
 }
 \value{
 Un vector de caracteres con los nombres de municipios limpiados.
@@ -25,13 +30,27 @@ Esta función limpia y estandariza los nombres de los municipios en la Repúblic
 con tolerancia para la similitud de cadenas y opciones para el manejo de errores. Utiliza
 el sistema oficial de códigos municipales de la República Dominicana.
 }
+\details{
+Soporta tres modos de entrada:
+\itemize{
+\item \strong{Nombre}: se busca en el dataset de aliases (exacto, prefijo, fuzzy).
+\item \strong{Código}: un código de 4 dígitos (MUN_ID) se valida directamente.
+\item \strong{Desambiguación}: usar \code{.province} para filtrar por provincia padre.
+}
+}
 \examples{
 \dontrun{
 # Uso básico con nombres de municipios
-nombres_mun_limpios <- gd_clean_municipality_name(c("santiago", "moca", "bonao"))
+gd_clean_municipality_name(c("santiago", "moca", "bonao"))
+
+# Con código directo (4 dígitos)
+gd_clean_municipality_name("0201")
 
 # Con variantes de prefijos
 gd_clean_municipality_name(c("Municipio de Santiago", "Mun. Moca"))
+
+# Con provincia padre
+gd_clean_municipality_name("Azua", .province = "Azua")
 
 # Con tolerancia y manejo de errores
 gd_clean_municipality_name("santiagooo", .tol = 0.8, .on_error = "na")

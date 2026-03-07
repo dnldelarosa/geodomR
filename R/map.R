@@ -29,7 +29,7 @@ gd_detect_fill <- function(data, exclude = NULL) {
     candidates <- setdiff(names(data), exclude)
 
     if (length(candidates) == 0) {
-        stop("No hay variables candidatas para fill después de excluir las especificadas.")
+        stop("No hay variables candidatas para fill despu\u00e9s de excluir las especificadas.")
     }
 
     scores <- sapply(candidates, function(col_name) {
@@ -61,9 +61,9 @@ gd_detect_fill <- function(data, exclude = NULL) {
             mean_val <- mean(col_clean, na.rm = TRUE)
             if (mean_val == 0) {
                 # Usar solo varianza si la media es 0
-                score <- sd(col_clean, na.rm = TRUE) / max(abs(col_clean))
+                score <- stats::sd(col_clean, na.rm = TRUE) / max(abs(col_clean))
             } else {
-                cv <- sd(col_clean, na.rm = TRUE) / abs(mean_val)
+                cv <- stats::sd(col_clean, na.rm = TRUE) / abs(mean_val)
                 # Normalizar CV usando función sigmoide suave
                 score <- 1 - exp(-cv)
             }
@@ -129,22 +129,28 @@ gd_map_data <- function(data, fill = NULL, .level = NULL, .name = NULL, .key = N
     if (is.null(info[["level"]])) {
         stop(
             "No se pudo determinar el nivel administrativo del mapa. ",
-            "Verifique que los datos contengan nombres de unidades geográficas válidas."
+            "Por favor, especifique el argumento '.level' manualmente (ej: 'provinces', 'municipalities', etc.)."
         )
     }
 
     if (is.null(info[["name"]])) {
-        stop("No se pudo determinar la variable de enlace geográfico en los datos.")
+        stop(
+            "No se pudo determinar la variable de enlace geogr\u00e1fico en los datos.",
+            "Por favor, especifique el argumento '.name' manualmente."
+        )
     }
 
     if (is.null(info[["key"]])) {
-        stop("No se pudo determinar la variable clave para el enlace.")
+        stop(
+            "No se pudo determinar la variable clave para el enlace.",
+            "Por favor, especifique el argumento '.key' manualmente."
+        )
     }
 
     # Detectar fill automáticamente si no se especifica
     if (is.null(fill)) {
         fill <- gd_detect_fill(data, exclude = info[["name"]])
-        message("Variable de fill detectada automáticamente: '", fill, "'")
+        # message("Variable de fill detectada autom\u00e1ticamente: '", fill, "'")
     }
 
     # Obtener geometrías del nivel detectado
@@ -273,7 +279,7 @@ gd_map_data <- function(data, fill = NULL, .level = NULL, .name = NULL, .key = N
                     )
                 },
                 error = function(e) {
-                    warning("No se pudieron limpiar los nombres en geometrías: ", e$message)
+                    warning("No se pudieron limpiar los nombres en geometr\u0069as: ", e$message)
                 }
             )
         } else if (level == "regions") {
@@ -286,7 +292,7 @@ gd_map_data <- function(data, fill = NULL, .level = NULL, .name = NULL, .key = N
                     )
                 },
                 error = function(e) {
-                    warning("No se pudieron limpiar los nombres en geometrías: ", e$message)
+                    warning("No se pudieron limpiar los nombres en geometr\u0069as: ", e$message)
                 }
             )
         } else if (level == "zones") {
@@ -299,7 +305,7 @@ gd_map_data <- function(data, fill = NULL, .level = NULL, .name = NULL, .key = N
                     )
                 },
                 error = function(e) {
-                    warning("No se pudieron limpiar los nombres en geometrías: ", e$message)
+                    warning("No se pudieron limpiar los nombres en geometr\u0069as: ", e$message)
                 }
             )
         } else if (level == "municipalities") {
@@ -312,7 +318,7 @@ gd_map_data <- function(data, fill = NULL, .level = NULL, .name = NULL, .key = N
                     )
                 },
                 error = function(e) {
-                    warning("No se pudieron limpiar los nombres en geometrías: ", e$message)
+                    warning("No se pudieron limpiar los nombres en geometr\u0069as: ", e$message)
                 }
             )
         } else if (level == "dm") {
@@ -325,7 +331,7 @@ gd_map_data <- function(data, fill = NULL, .level = NULL, .name = NULL, .key = N
                     )
                 },
                 error = function(e) {
-                    warning("No se pudieron limpiar los nombres en geometrías: ", e$message)
+                    warning("No se pudieron limpiar los nombres en geometr\u0069as: ", e$message)
                 }
             )
         } else if (level == "sections") {
@@ -338,7 +344,7 @@ gd_map_data <- function(data, fill = NULL, .level = NULL, .name = NULL, .key = N
                     )
                 },
                 error = function(e) {
-                    warning("No se pudieron limpiar los nombres en geometrías: ", e$message)
+                    warning("No se pudieron limpiar los nombres en geometr\u0069as: ", e$message)
                 }
             )
         } else if (level == "bparajes") {
@@ -351,7 +357,7 @@ gd_map_data <- function(data, fill = NULL, .level = NULL, .name = NULL, .key = N
                     )
                 },
                 error = function(e) {
-                    warning("No se pudieron limpiar los nombres en geometrías: ", e$message)
+                    warning("No se pudieron limpiar los nombres en geometr\u0069as: ", e$message)
                 }
             )
         }

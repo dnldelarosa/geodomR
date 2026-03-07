@@ -34,18 +34,18 @@ gd_provinces <- function(id = "RD_PROV", sf = TRUE, .reg = NULL, verbose = FALSE
   PROV_CODE <- NULL  # Evitar el warning de no utilizado
   REG_CODE <- NULL   # Evitar el warning de no utilizado
 
-  if (verbose) message("Descargando y cargando límites de provincias...")
+  if (verbose) message("Descargando y cargando l\u00edmites de provincias...")
 
   data_sf <- fetch_and_cache(id = id, verbose = verbose)
 
   if (!sf) {
-    if (verbose) message("Eliminando geometría, devolviendo data.frame...")
+    if (verbose) message("Eliminando geometr\u00eda, devolviendo data.frame...")
     data_sf <- sf::st_drop_geometry(data_sf)
   }
 
   if (!is.null(.reg)) {
     if (.reg == tolower('rup')) {
-      if (verbose) message("Agregando columna de región administrativa (Ley 345-22)...")
+      if (verbose) message("Agregando columna de regi\u00f3n administrativa (Ley 345-22)...")
       .datos <- gd_get_dataset(id = "division_territorial_rd_ley_345_22", verbose = verbose)
       .datos[['data']] |>
         dplyr::select(PROV = PROV_CODE, REG_CODE) |>

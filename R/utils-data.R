@@ -39,8 +39,8 @@ check_remote_file_changed <- function(url, pin_name, board, verbose = FALSE) {
 
       # Verificar disponibilidad de httr2
       if (!requireNamespace("httr2", quietly = TRUE)) {
-        if (verbose) message("httr2 no disponible, usando caché local")
-        return(FALSE) # Sin httr2, asumir que no cambió (usar caché)
+        if (verbose) message("httr2 no disponible, usando cach\u00e9 local")
+        return(FALSE) # Sin httr2, asumir que no cambi\u00f3 (usar cach\u00e9)
       }
 
       # Hacer petición HEAD para obtener metadatos actuales
@@ -60,7 +60,7 @@ check_remote_file_changed <- function(url, pin_name, board, verbose = FALSE) {
         # Si falla la petición HEAD, probablemente no hay conexión a internet.
         # Usar caché sin importar la antigüedad. El usuario puede usar
         # force_download = TRUE si desea forzar una actualización.
-        if (verbose) message("No se pudo contactar al servidor. Usando caché local.")
+        if (verbose) message("No se pudo contactar al servidor. Usando cach\u00e9 local.")
         return(FALSE)
       }
 
@@ -94,7 +94,7 @@ check_remote_file_changed <- function(url, pin_name, board, verbose = FALSE) {
         if (!is.na(remote_time)) {
           # Dar margen de error de 2 minutos para diferencias menores
           time_diff <- abs(as.numeric(difftime(local_created, remote_time, units = "mins")))
-          return(time_diff > 2) # Solo considerar cambio si hay más de 2 minutos de diferencia
+          return(time_diff > 2) # Solo considerar cambio si hay m\u00e1s de 2 minutos de diferencia
         }
       }
 
@@ -103,7 +103,7 @@ check_remote_file_changed <- function(url, pin_name, board, verbose = FALSE) {
     },
     error = function(e) {
       # En caso de error, usar caché (ser conservador)
-      if (verbose) message("Error verificando cambios remotos, usando caché local")
+      if (verbose) message("Error verificando cambios remotos, usando cach\u00e9 local")
       return(FALSE)
     }
   )
@@ -174,7 +174,7 @@ fetch_and_cache <- function(id, force_download = FALSE, verbose = FALSE, ...) {
     },
     error = function(e) {
       if (pins::pin_exists(local_board, id)) {
-        warning("Fallo al descargar datos remotos. Usando versión en caché (puede estar desactualizada). Error: ", e$message, call. = FALSE)
+        warning("Fallo al descargar datos remotos. Usando versi\u00f3n en cach\u00e9 (puede estar desactualizada). Error: ", e$message, call. = FALSE)
         return(structure(sf::st_as_sf(pins::pin_read(local_board, id)), from_cache_fallback = TRUE))
       }
       stop(
@@ -260,7 +260,7 @@ gd_get_dataset <- function(id, force_download = FALSE, verbose = FALSE, ...) {
     },
     error = function(e) {
       if (pins::pin_exists(local_board, id)) {
-        warning("Fallo al descargar datos remotos. Usando versión en caché (puede estar desactualizada). Error: ", e$message, call. = FALSE)
+        warning("Fallo al descargar datos remotos. Usando versi\u00f3n en cach\u00e9 (puede estar desactualizada). Error: ", e$message, call. = FALSE)
         return(structure(pins::pin_read(local_board, id), from_cache_fallback = TRUE))
       }
       stop(

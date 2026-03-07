@@ -8,7 +8,8 @@ utils::globalVariables(c(
   'DM_NAME_ALIAS',
   'SEC_NAME_ALIAS',
   'BP_NAME_ALIAS',
-  '.name_clean', '.dist'
+  '.name_clean', '.dist',
+  '.data', '_ID'
 ))
 
 # ══════════════════════════════════════════════════════════════════════════════

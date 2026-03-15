@@ -1,0 +1,153 @@
+---
+title: "Uso General de geodomR"
+author: "geodomR"
+output: rmarkdown::html_vignette
+vignette: >
+  %\VignetteIndexEntry{Uso General de geodomR}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+---
+
+```{r setup, include = FALSE}
+knitr::opts_chunk$set(
+    collapse = TRUE,
+    comment = "#>",
+    warning = FALSE,
+    message = FALSE
+)
+```
+
+## Introducción
+
+Esta viñeta cubre capacidades generales de `geodom` más allá del mapeo: jerarquía administrativa, limpieza de nombres, acceso a datasets y configuración del caché local.
+
+```{r}
+library(geodom)
+```
+
+## Jerarquía Administrativa con `gd_add_parent_cols()`
+
+`gd_add_parent_cols()` enriquece tus datos agregando columnas de niveles superiores en la jerarquía territorial:
+
+Regiones > Provincias > Municipios > Distritos Municipales > Secciones > Barrios/Parajes
+
+```{r hierarchy-data}
+datos_provincias <- data.frame(
+    provincia = c(
+        "Santo Domingo", "Santiago", "La Vega",
+        "San Cristóbal", "La Romana", "Puerto Plata"
+    ),
+    poblacion = c(2500000, 1000000, 400000, 550000, 250000, 320000)
+)
+
+datos_con_region <- gd_add_parent_cols(datos_provincias)
+datos_con_region[, c("provincia", "Region", "poblacion")]
+```
+
+También puedes pedir niveles específicos:
+
+```{r hierarchy-levels}
+datos_solo_region <- gd_add_parent_cols(datos_provincias, .levels = "regions")
+datos_solo_region[, c("provincia", "Region")]
+```
+
+## Limpieza de Nombres
+
+`geodom` incluye funciones para normalizar nombres con tolerancia a errores tipográficos.
+
+```{r cleaning}
+gd_clean_prov_name(c("Sto Domingo", "Pto Plata", "La Vega"), .on_error = "na")
+```
+
+Funciones disponibles por nivel:
+
+- `gd_clean_region_name()`
+- `gd_clean_prov_name()`
+- `gd_clean_municipality_name()`
+- `gd_clean_dm_name()`
+- `gd_clean_section_name()`
+- `gd_clean_bparaje_name()`
+- `gd_clean_zone_name()`
+
+## Datasets Geográficos
+
+Puedes cargar límites administrativos directamente como objetos `sf`:
+
+```{r datasets}
+provincias <- gd_provinces()
+regiones <- gd_regions()
+
+class(provincias)
+head(names(provincias))
+```
+
+Otros datasets disponibles:
+
+- `gd_municipalities()`
+- `gd_dm()`
+- `gd_sections()`
+- `gd_bparajes()`
+- `gd_zones()`
+- `gd_macroregions()`
+
+## Configuración del Caché
+
+`geodom` almacena datos descargados en caché local (`~/.geodom` por defecto). Puedes personalizar la ubicación **antes** de cargar el paquete:
+
+```{r cache-config, eval = FALSE}
+options(geodom.cache.path = "D:/mi_proyecto/geodom_cache")
+library(geodom)
+#> GeoDOM: Usando caché local en 'D:/mi_proyecto/geodom_cache'
+```
+
+Para consultar la ruta actual:
+
+```{r cache-consulta}
+getOption("geodom.cache.path")
+```
+
+## Resumen de Funciones
+
+### Mapeo
+
+| Función | Uso |
+|---------|-----|
+| `gd_map()` | Crear mapa coroplético completo |
+| `gd_map_data()` | Preparar datos unidos a geometrías |
+| `gd_ggplot()` | Inicializar ggplot con datos geográficos |
+| `gd_geom_sf()` | Capa geom_sf con autodetección |
+
+### Detección Automática
+
+| Función | Uso |
+|---------|-----|
+| `gd_detect_level()` | Detectar nivel geográfico |
+| `gd_detect_fill()` | Detectar mejor variable para fill |
+| `gd_detect_column_type()` | Clasificar tipo de columna geográfica |
+| `gd_analyze_columns()` | Analizar columnas de un data frame |
+
+### Jerarquía y Limpieza
+
+| Función | Uso |
+|---------|-----|
+| `gd_add_parent_cols()` | Agregar columnas de niveles superiores |
+| `gd_clean_region_name()` | Estandarizar nombres de regiones |
+| `gd_clean_prov_name()` | Estandarizar nombres de provincias |
+| `gd_clean_municipality_name()` | Estandarizar nombres de municipios |
+| `gd_clean_dm_name()` | Estandarizar nombres de distritos municipales |
+| `gd_clean_section_name()` | Estandarizar nombres de secciones |
+| `gd_clean_bparaje_name()` | Estandarizar nombres de barrios/parajes |
+| `gd_clean_zone_name()` | Estandarizar nombres de zonas |
+
+### Datos Geográficos
+
+| Función | Uso |
+|---------|-----|
+| `gd_regions()` | Geometrías de regiones |
+| `gd_provinces()` | Geometrías de provincias |
+| `gd_municipalities()` | Geometrías de municipios |
+| `gd_dm()` | Geometrías de distritos municipales |
+| `gd_sections()` | Geometrías de secciones |
+| `gd_bparajes()` | Geometrías de barrios/parajes |
+| `gd_zones()` | Geometrías de zonas |
+| `gd_macroregions()` | Geometrías de macroregiones |

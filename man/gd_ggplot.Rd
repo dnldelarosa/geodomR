@@ -22,7 +22,9 @@ Un objeto \code{ggplot} listo para agregar capas.
 }
 \description{
 Esta función inicializa un objeto ggplot con los datos preparados
-para mapeo de República Dominicana.
+para mapeo de República Dominicana. Establece automáticamente el
+mapping de \code{geometry} y \code{fill} para que las capas posteriores
+(como \code{gd_geom_sf()} o \code{geom_sf()}) lo hereden sin configuración adicional.
 }
 \examples{
 \dontrun{
@@ -30,6 +32,6 @@ datos <- data.frame(
     provincia = c("Santo Domingo", "Santiago"),
     poblacion = c(2500000, 1000000)
 )
-p <- gd_ggplot(datos) + ggplot2::geom_sf(aes(fill = poblacion))
+gd_ggplot(datos) + gd_geom_sf(color = "white")
 }
 }

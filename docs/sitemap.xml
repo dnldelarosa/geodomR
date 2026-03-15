@@ -1,17 +1,23 @@
 <urlset xmlns = 'http://www.sitemaps.org/schemas/sitemap/0.9'>
 <url><loc>https://geodomproject.github.io/geodomR/404.html</loc></url>
+<url><loc>https://geodomproject.github.io/geodomR/articles/general.html</loc></url>
 <url><loc>https://geodomproject.github.io/geodomR/articles/index.html</loc></url>
 <url><loc>https://geodomproject.github.io/geodomR/articles/mapeo.html</loc></url>
 <url><loc>https://geodomproject.github.io/geodomR/authors.html</loc></url>
 <url><loc>https://geodomproject.github.io/geodomR/index.html</loc></url>
 <url><loc>https://geodomproject.github.io/geodomR/LICENSE-text.html</loc></url>
 <url><loc>https://geodomproject.github.io/geodomR/LICENSE.html</loc></url>
+<url><loc>https://geodomproject.github.io/geodomR/reference/dot-build_parent_lookup.html</loc></url>
 <url><loc>https://geodomproject.github.io/geodomR/reference/dot-get_admin_levels_data.html</loc></url>
+<url><loc>https://geodomproject.github.io/geodomR/reference/gd_add_parent_cols.html</loc></url>
 <url><loc>https://geodomproject.github.io/geodomR/reference/gd_analyze_columns.html</loc></url>
 <url><loc>https://geodomproject.github.io/geodomR/reference/gd_bparajes.html</loc></url>
+<url><loc>https://geodomproject.github.io/geodomR/reference/gd_clean_bparaje_name.html</loc></url>
+<url><loc>https://geodomproject.github.io/geodomR/reference/gd_clean_dm_name.html</loc></url>
 <url><loc>https://geodomproject.github.io/geodomR/reference/gd_clean_municipality_name.html</loc></url>
 <url><loc>https://geodomproject.github.io/geodomR/reference/gd_clean_prov_name.html</loc></url>
 <url><loc>https://geodomproject.github.io/geodomR/reference/gd_clean_region_name.html</loc></url>
+<url><loc>https://geodomproject.github.io/geodomR/reference/gd_clean_section_name.html</loc></url>
 <url><loc>https://geodomproject.github.io/geodomR/reference/gd_clean_zone_name.html</loc></url>
 <url><loc>https://geodomproject.github.io/geodomR/reference/gd_detect_column_type.html</loc></url>
 <url><loc>https://geodomproject.github.io/geodomR/reference/gd_detect_fill.html</loc></url>

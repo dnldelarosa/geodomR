@@ -9,7 +9,9 @@ gd_geom_sf(data = NULL, ...)
 \arguments{
 \item{data}{Un data frame o NULL. Si es NULL, usa los datos del ggplot padre.}
 
-\item{...}{Argumentos adicionales pasados a \code{geom_sf}.}
+\item{...}{Argumentos adicionales pasados a \code{geom_sf} (ej: color, linewidth).
+Argumentos especiales que se extraen antes: \code{fill} (variable de relleno),
+\code{.level}, \code{.name}, \code{.key} (detección geográfica).}
 }
 \value{
 Una capa ggplot2 de tipo \code{geom_sf}.
@@ -18,13 +20,23 @@ Una capa ggplot2 de tipo \code{geom_sf}.
 Esta función crea una capa \code{geom_sf} que puede agregarse a un ggplot,
 procesando automáticamente los datos y uniéndolos con geometrías administrativas.
 }
+\details{
+Cuando se usa con \code{gd_ggplot()} (sin \code{data}), hereda los datos y mappings
+del ggplot padre. Cuando se proporciona \code{data}, procesa automáticamente
+los datos crudos uniéndolos con las geometrías correspondientes.
+}
 \examples{
 \dontrun{
 datos <- data.frame(
     provincia = c("Santo Domingo", "Santiago"),
     poblacion = c(2500000, 1000000)
 )
+
+# Con gd_ggplot (hereda datos y fill)
+gd_ggplot(datos) + gd_geom_sf(color = "white")
+
+# Independiente con datos crudos
 ggplot2::ggplot() +
-    gd_geom_sf(data = datos, aes(fill = poblacion))
+    gd_geom_sf(data = datos, fill = "poblacion")
 }
 }

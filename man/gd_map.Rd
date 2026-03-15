@@ -4,12 +4,30 @@
 \alias{gd_map}
 \title{Crear un mapa coroplético de República Dominicana}
 \usage{
-gd_map(data, fill = NULL, .level = NULL, .name = NULL, .key = NULL, ...)
+gd_map(
+  data,
+  fill = NULL,
+  labels = NULL,
+  label_size = 2.5,
+  .level = NULL,
+  .name = NULL,
+  .key = NULL,
+  ...
+)
 }
 \arguments{
 \item{data}{Un data frame con los datos a mapear.}
 
 \item{fill}{Nombre de la variable para fill. Si es NULL, se detecta automáticamente.}
+
+\item{labels}{Controla las etiquetas en el mapa. Puede ser:
+\itemize{
+\item \code{NULL} o \code{FALSE}: sin etiquetas (por defecto).
+\item \code{TRUE}: etiquetas con el nombre geográfico canónico (TOPONIMIA).
+\item Una cadena de caracteres: nombre de la columna a usar como etiqueta.
+}}
+
+\item{label_size}{Tamaño del texto de las etiquetas. Por defecto 2.5.}
 
 \item{.level}{Nivel administrativo opcional. Si es NULL, se detecta automáticamente.}
 
@@ -35,6 +53,12 @@ datos <- data.frame(
     poblacion = c(2500000, 1000000, 400000)
 )
 gd_map(datos)
+
+# Con etiquetas automáticas
+gd_map(datos, labels = TRUE)
+
+# Con etiquetas de una columna específica
+gd_map(datos, fill = "poblacion", labels = "provincia")
 
 # Con argumentos explícitos
 gd_map(datos, fill = "poblacion", color = "white", linewidth = 0.3)

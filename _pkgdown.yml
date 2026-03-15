@@ -54,9 +54,18 @@ reference:
       - gd_clean_region_name
       - gd_clean_zone_name
       - gd_clean_municipality_name
+      - gd_clean_dm_name
+      - gd_clean_section_name
+      - gd_clean_bparaje_name
+
+  - title: "Jerarquía"
+    desc: "Funciones para enriquecer datos con niveles administrativos superiores"
+    contents:
+      - gd_add_parent_cols
 
 articles:
   - title: "Guías"
     navbar: ~
     contents:
+      - general
       - mapeo

@@ -381,7 +381,9 @@ gd_map_data <- function(data, fill = NULL, .level = NULL, .name = NULL, .key = N
 #' Inicializar un ggplot para mapas de República Dominicana
 #'
 #' Esta función inicializa un objeto ggplot con los datos preparados
-#' para mapeo de República Dominicana.
+#' para mapeo de República Dominicana. Establece automáticamente el
+#' mapping de `geometry` y `fill` para que las capas posteriores
+#' (como `gd_geom_sf()` o `geom_sf()`) lo hereden sin configuración adicional.
 #'
 #' @inheritParams gd_map_data
 #'
@@ -393,12 +395,21 @@ gd_map_data <- function(data, fill = NULL, .level = NULL, .name = NULL, .key = N
 #'     provincia = c("Santo Domingo", "Santiago"),
 #'     poblacion = c(2500000, 1000000)
 #' )
-#' p <- gd_ggplot(datos) + ggplot2::geom_sf(aes(fill = poblacion))
+#' gd_ggplot(datos) + gd_geom_sf(color = "white")
 #' }
 #' @export
 gd_ggplot <- function(data, fill = NULL, .level = NULL, .name = NULL, .key = NULL) {
     map_data <- gd_map_data(data, fill, .level, .name, .key)
-    ggplot2::ggplot(data = map_data)
+
+    fill_var <- attr(map_data, "fill_var")
+    geo_col <- attr(map_data, "sf_column") %||% "geometry"
+
+    default_mapping <- ggplot2::aes(
+        geometry = .data[[geo_col]],
+        fill = .data[[fill_var]]
+    )
+
+    ggplot2::ggplot(data = map_data, mapping = default_mapping)
 }
 
 
@@ -407,8 +418,14 @@ gd_ggplot <- function(data, fill = NULL, .level = NULL, .name = NULL, .key = NUL
 #' Esta función crea una capa `geom_sf` que puede agregarse a un ggplot,
 #' procesando automáticamente los datos y uniéndolos con geometrías administrativas.
 #'
+#' Cuando se usa con `gd_ggplot()` (sin `data`), hereda los datos y mappings
+#' del ggplot padre. Cuando se proporciona `data`, procesa automáticamente
+#' los datos crudos uniéndolos con las geometrías correspondientes.
+#'
 #' @param data Un data frame o NULL. Si es NULL, usa los datos del ggplot padre.
-#' @param ... Argumentos adicionales pasados a `geom_sf`.
+#' @param ... Argumentos adicionales pasados a `geom_sf` (ej: color, linewidth).
+#'   Argumentos especiales que se extraen antes: `fill` (variable de relleno),
+#'   `.level`, `.name`, `.key` (detección geográfica).
 #'
 #' @return Una capa ggplot2 de tipo `geom_sf`.
 #'
@@ -418,8 +435,13 @@ gd_ggplot <- function(data, fill = NULL, .level = NULL, .name = NULL, .key = NUL
 #'     provincia = c("Santo Domingo", "Santiago"),
 #'     poblacion = c(2500000, 1000000)
 #' )
+#'
+#' # Con gd_ggplot (hereda datos y fill)
+#' gd_ggplot(datos) + gd_geom_sf(color = "white")
+#'
+#' # Independiente con datos crudos
 #' ggplot2::ggplot() +
-#'     gd_geom_sf(data = datos, aes(fill = poblacion))
+#'     gd_geom_sf(data = datos, fill = "poblacion")
 #' }
 #' @export
 gd_geom_sf <- function(data = NULL, ...) {
@@ -444,8 +466,13 @@ gd_geom_sf <- function(data = NULL, ...) {
 
         # ggplot2 >=4.0 requiere aes(geometry=) explícito en geom_sf
         geo_col <- attr(map_data, "sf_column") %||% "geometry"
+        fill_var <- attr(map_data, "fill_var")
+
         if (is.null(.args$mapping)) {
-            .args$mapping <- ggplot2::aes(geometry = .data[[geo_col]])
+            .args$mapping <- ggplot2::aes(
+                geometry = .data[[geo_col]],
+                fill = .data[[fill_var]]
+            )
         }
     }
 
@@ -461,6 +488,11 @@ gd_geom_sf <- function(data = NULL, ...) {
 #'
 #' @param data Un data frame con los datos a mapear.
 #' @param fill Nombre de la variable para fill. Si es NULL, se detecta automáticamente.
+#' @param labels Controla las etiquetas en el mapa. Puede ser:
+#'   - `NULL` o `FALSE`: sin etiquetas (por defecto).
+#'   - `TRUE`: etiquetas con el nombre geográfico canónico (TOPONIMIA).
+#'   - Una cadena de caracteres: nombre de la columna a usar como etiqueta.
+#' @param label_size Tamaño del texto de las etiquetas. Por defecto 2.5.
 #' @param .level Nivel administrativo opcional. Si es NULL, se detecta automáticamente.
 #' @param .name Nombre de la variable geográfica en data. Si es NULL, se detecta automáticamente.
 #' @param .key Nombre de la variable clave en los datos geográficos. Si es NULL, se detecta automáticamente.
@@ -477,11 +509,18 @@ gd_geom_sf <- function(data = NULL, ...) {
 #' )
 #' gd_map(datos)
 #'
+#' # Con etiquetas automáticas
+#' gd_map(datos, labels = TRUE)
+#'
+#' # Con etiquetas de una columna específica
+#' gd_map(datos, fill = "poblacion", labels = "provincia")
+#'
 #' # Con argumentos explícitos
 #' gd_map(datos, fill = "poblacion", color = "white", linewidth = 0.3)
 #' }
 #' @export
-gd_map <- function(data, fill = NULL, .level = NULL, .name = NULL, .key = NULL, ...) {
+gd_map <- function(data, fill = NULL, labels = NULL, label_size = 2.5,
+                   .level = NULL, .name = NULL, .key = NULL, ...) {
     # Preparar datos (fill se detecta aquí si es NULL)
     map_data <- gd_map_data(data, fill, .level, .name, .key)
 
@@ -505,6 +544,41 @@ gd_map <- function(data, fill = NULL, .level = NULL, .name = NULL, .key = NULL, 
             ...
         ) +
         ggplot2::theme_void()
+
+    # Agregar etiquetas si se solicitan
+    if (!is.null(labels) && !identical(labels, FALSE)) {
+        # Determinar la columna de etiquetas
+        if (isTRUE(labels)) {
+            label_col <- "TOPONIMIA"
+        } else if (is.character(labels) && length(labels) == 1) {
+            label_col <- labels
+        } else {
+            cli::cli_abort(c(
+                "x" = "El argumento 'labels' debe ser TRUE, FALSE, NULL, o un nombre de columna.",
+                "i" = "Ejemplo: labels = TRUE, labels = 'provincia'"
+            ))
+        }
+
+        if (!label_col %in% names(map_data)) {
+            cli::cli_abort(c(
+                "x" = paste0("La columna '", label_col, "' no existe en los datos del mapa."),
+                "i" = paste0("Columnas disponibles: ", paste(names(map_data), collapse = ", "))
+            ))
+        }
+
+        # Calcular puntos interiores para ubicar las etiquetas
+        centroids <- sf::st_point_on_surface(map_data)
+
+        p <- p +
+            ggplot2::geom_sf_text(
+                data = centroids,
+                mapping = ggplot2::aes(
+                    geometry = .data[[geo_col]],
+                    label = .data[[label_col]]
+                ),
+                size = label_size
+            )
+    }
 
     return(p)
 }
